@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Car Rental System - Low-Level Design in Java
+  Author: Jyoti Prakash Parida
+
+  Zero runtime dependencies on purpose: the goal is to see the design (layers,
+  interfaces, patterns) without a framework doing the work behind the scenes.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.jyoti</groupId>
+    <artifactId>car-rental-system</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>Car Rental System (LLD)</name>
+    <description>
+        Low-level design of a car rental system in plain Java 17: layered architecture,
+        SOLID, Strategy / Factory / Template Method / State / Observer / Singleton patterns,
+        and double-booking prevention under concurrency.
+    </description>
+
+    <developers>
+        <developer>
+            <name>Jyoti Prakash Parida</name>
+            <email>jyotipr45@gmail.com</email>
+        </developer>
+    </developers>
+
+    <properties>
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <main.class>com.jyoti.carrental.CarRentalApplication</main.class>
+    </properties>
+
+    <build>
+        <plugins>
+            <!-- Executable jar: java -jar target/car-rental-system-1.0.0.jar -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>${main.class}</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -1,0 +1,44 @@
+<!doctype html>
+<!--
+  Swagger UI for the Car Rental API.
+  Loads Swagger UI 5.33.3 from the jsDelivr CDN (needs internet in the browser) and
+  renders /openapi.yaml served by HttpApiServer. "Try it out" sends real requests.
+  Author: Jyoti Prakash Parida
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Car Rental API · Swagger UI</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.33.3/swagger-ui.css">
+  <style>
+    body { margin: 0; background: #fafafa; }
+    .topbar { display: none; }
+    .offline { font: 15px/1.5 system-ui, sans-serif; max-width: 640px; margin: 48px auto; padding: 0 16px; color: #222; }
+  </style>
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.33.3/swagger-ui-bundle.js"></script>
+<script>
+  if (typeof SwaggerUIBundle === "undefined") {
+    document.getElementById("swagger-ui").innerHTML =
+      '<div class="offline"><h2>Swagger UI could not load</h2>' +
+      '<p>The page loads Swagger UI from cdn.jsdelivr.net, which needs an internet connection.</p>' +
+      '<p>The API itself is working. You can still use the raw contract at ' +
+      '<a href="/openapi.yaml">/openapi.yaml</a> or import it into Postman / Requestly.</p></div>';
+  } else {
+    window.ui = SwaggerUIBundle({
+      url: "/openapi.yaml",
+      dom_id: "#swagger-ui",
+      deepLinking: true,
+      displayRequestDuration: true,
+      persistAuthorization: true,   // keeps the X-User-Id you enter under "Authorize" across reloads
+      tryItOutEnabled: true,
+      docExpansion: "list",
+      defaultModelsExpandDepth: 0
+    });
+  }
+</script>
+</body>
+</html>

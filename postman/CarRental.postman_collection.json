@@ -1,0 +1,1955 @@
+{
+  "info": {
+    "_postman_id": "d9992d70-ada4-55ea-956a-55789c31d999",
+    "name": "Car Rental System API",
+    "description": "Manual + automated checks for the Car Rental System REST API.\n\n1. Start the server (server.bat or ApiServerApplication in IntelliJ).\n2. Run the folders in order, or use Run collection.\n\nIds are captured from responses into collection variables, and dates are computed from today, so the collection can be re-run without restarting the server.\n\nAuthor: Jyoti Prakash Parida",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 Setup",
+      "description": "Run first: checks the server and prepares dates. Requires the server started with seed data (default).",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Dates relative to today, so the collection works on any day and can be re-run.",
+                  "const pad = n => String(n).padStart(2, \"0\");",
+                  "const day = offset => { const d = new Date(); d.setDate(d.getDate() + offset); return d.getFullYear() + \"-\" + pad(d.getMonth() + 1) + \"-\" + pad(d.getDate()); };",
+                  "pm.collectionVariables.set(\"today\", day(0));",
+                  "pm.collectionVariables.set(\"plus1\", day(1));",
+                  "pm.collectionVariables.set(\"plus2\", day(2));",
+                  "pm.collectionVariables.set(\"plus5\", day(5));",
+                  "pm.collectionVariables.set(\"plus6\", day(6));",
+                  "pm.collectionVariables.set(\"plus7\", day(7));",
+                  "pm.collectionVariables.set(\"plus9\", day(9));",
+                  "pm.collectionVariables.set(\"plus20\", day(20));",
+                  "pm.collectionVariables.set(\"plus22\", day(22));",
+                  "pm.collectionVariables.set(\"plus25\", day(25));",
+                  "pm.collectionVariables.set(\"yesterday\", day(-1));",
+                  "pm.collectionVariables.set(\"lateReturn\", day(4) + \"T11:00:00\");  // 2 days after the end date (today+2)",
+                  "const rnd = Math.floor(1000 + Math.random() * 9000);",
+                  "pm.collectionVariables.set(\"newReg\", \"MH12ZZ\" + rnd);",
+                  "pm.collectionVariables.set(\"newEmail\", \"neha\" + rnd + \"@mail.com\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Server is UP\", () => pm.expect(pm.response.json().status).to.eql(\"UP\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login as admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@rental.com\",\n  \"password\": \"admin@123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Is ADMIN\", () => pm.expect(res.data.role).to.eql(\"ADMIN\"));",
+                  "pm.collectionVariables.set(\"adminId\", res.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login as Riya (customer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"riya@mail.com\",\n  \"password\": \"riya@123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.collectionVariables.set(\"riyaId\", res.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login as Arjun (customer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"arjun@mail.com\",\n  \"password\": \"arjun@123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.collectionVariables.set(\"arjunId\", res.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List branches",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/branches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "branches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"At least one branch\", () => pm.expect(res.data.length).to.be.above(0));",
+                  "pm.collectionVariables.set(\"branchId\", res.data[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List vehicles at branch",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/branches/{{branchId}}/vehicles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "branches",
+                "{{branchId}}",
+                "vehicles"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "const byModel = m => res.data.find(v => v.model === m).id;",
+                  "pm.collectionVariables.set(\"swiftId\", byModel(\"Swift\"));",
+                  "pm.collectionVariables.set(\"cretaId\", byModel(\"Creta\"));",
+                  "pm.collectionVariables.set(\"nexonId\", byModel(\"Nexon EV\"));",
+                  "pm.collectionVariables.set(\"bmwId\", byModel(\"7 Series\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 Happy path: book \u2192 pay \u2192 pickup \u2192 late return",
+      "description": "Riya rents the Creta (Rs.3200/day) from today for 3 days and returns it 2 days late.",
+      "item": [
+        {
+          "name": "Search SUVs for 3 days",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vehicles/search?branchId={{branchId}}&startDate={{today}}&endDate={{plus2}}&carType=SUV",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "branchId",
+                  "value": "{{branchId}}"
+                },
+                {
+                  "key": "startDate",
+                  "value": "{{today}}"
+                },
+                {
+                  "key": "endDate",
+                  "value": "{{plus2}}"
+                },
+                {
+                  "key": "carType",
+                  "value": "SUV"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Creta is available\", () => pm.expect(res.data.map(v => v.model)).to.include(\"Creta\"));",
+                  "pm.test(\"Cheapest first\", () => pm.expect(res.data[0].pricePerDay).to.be.at.most(res.data[res.data.length - 1].pricePerDay));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create booking (Riya, Creta)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{riyaId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"{{cretaId}}\",\n  \"startDate\": \"{{today}}\",\n  \"endDate\": \"{{plus2}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Pending payment\", () => pm.expect(res.data.status).to.eql(\"PENDING_PAYMENT\"));",
+                  "pm.test(\"3 days x Rs.3200 = 9600\", () => pm.expect(res.data.totalAmount).to.eql(9600));",
+                  "pm.collectionVariables.set(\"bookingId\", res.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pay with UPI",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{riyaId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/{{bookingId}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{bookingId}}",
+                "payments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"UPI\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Payment SUCCESS\", () => pm.expect(res.data.status).to.eql(\"SUCCESS\"));",
+                  "pm.test(\"UPI reference\", () => pm.expect(res.data.transactionRef).to.match(/^UPI-/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get booking (now CONFIRMED)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{bookingId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Confirmed\", () => pm.expect(res.data.status).to.eql(\"CONFIRMED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin hands over the car (pickup)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{adminId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/{{bookingId}}/pickup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{bookingId}}",
+                "pickup"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Ongoing\", () => pm.expect(res.data.status).to.eql(\"ONGOING\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin receives it 2 days late (return)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{adminId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/{{bookingId}}/return",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{bookingId}}",
+                "return"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"returnTime\": \"{{lateReturn}}\",\n  \"lateFeeMethod\": \"CARD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Completed\", () => pm.expect(res.data.status).to.eql(\"COMPLETED\"));",
+                  "pm.test(\"Late fee = 2 x 3200 x 1.5 = 9600\", () => pm.expect(res.data.lateFee).to.eql(9600));",
+                  "pm.test(\"Total = 19200\", () => pm.expect(res.data.totalAmount).to.eql(19200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Payments for the booking",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/{{bookingId}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{bookingId}}",
+                "payments"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Rental + late fee\", () => pm.expect(res.data.map(p => p.purpose)).to.eql([\"RENTAL\", \"LATE_FEE\"]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 No double booking",
+      "item": [
+        {
+          "name": "Arjun books Nexon EV (+5..+7)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{arjunId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"{{nexonId}}\",\n  \"startDate\": \"{{plus5}}\",\n  \"endDate\": \"{{plus7}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.collectionVariables.set(\"arjunBookingId\", res.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Riya tries overlapping dates (+6..+9) \u2192 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{riyaId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"{{nexonId}}\",\n  \"startDate\": \"{{plus6}}\",\n  \"endDate\": \"{{plus9}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 409\", () => pm.response.to.have.status(409));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Explains the conflict\", () => pm.expect(res.message).to.include(\"already booked\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search hides the booked Nexon for those dates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vehicles/search?branchId={{branchId}}&startDate={{plus6}}&endDate={{plus6}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "branchId",
+                  "value": "{{branchId}}"
+                },
+                {
+                  "key": "startDate",
+                  "value": "{{plus6}}"
+                },
+                {
+                  "key": "endDate",
+                  "value": "{{plus6}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Nexon not listed\", () => pm.expect(res.data.map(v => v.model)).to.not.include(\"Nexon EV\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 Cancel and refund",
+      "item": [
+        {
+          "name": "Arjun pays by card",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{arjunId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/{{arjunBookingId}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{arjunBookingId}}",
+                "payments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"CARD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Riya tries to cancel Arjun's booking \u2192 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{riyaId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/{{arjunBookingId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{arjunBookingId}}",
+                "cancel"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 403\", () => pm.response.to.have.status(403));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Arjun cancels his booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{arjunId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/{{arjunBookingId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{arjunBookingId}}",
+                "cancel"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Cancelled\", () => pm.expect(res.data.status).to.eql(\"CANCELLED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Payment is REFUNDED",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/{{arjunBookingId}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{arjunBookingId}}",
+                "payments"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Refunded\", () => pm.expect(res.data[0].status).to.eql(\"REFUNDED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pickup of a cancelled booking \u2192 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{adminId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/{{arjunBookingId}}/pickup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{arjunBookingId}}",
+                "pickup"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 409\", () => pm.response.to.have.status(409));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 Payment declined (UPI limit)",
+      "description": "BMW 3 days = Rs.1,20,000, above the Rs.1,00,000 UPI limit.",
+      "item": [
+        {
+          "name": "Arjun books the BMW (+20..+22)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{arjunId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"{{bmwId}}\",\n  \"startDate\": \"{{plus20}}\",\n  \"endDate\": \"{{plus22}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Rs.120000\", () => pm.expect(res.data.totalAmount).to.eql(120000));",
+                  "pm.collectionVariables.set(\"bmwBookingId\", res.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pay with UPI \u2192 402 declined",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{arjunId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/{{bmwBookingId}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{bmwBookingId}}",
+                "payments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"UPI\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 402\", () => pm.response.to.have.status(402));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Says UPI limit\", () => pm.expect(res.message).to.include(\"UPI limit\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Booking still PENDING_PAYMENT",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/{{bmwBookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{bmwBookingId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Still pending\", () => pm.expect(res.data.status).to.eql(\"PENDING_PAYMENT\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Retry with CARD \u2192 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{arjunId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/{{bmwBookingId}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{bmwBookingId}}",
+                "payments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"CARD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup: cancel the BMW booking (keeps the collection re-runnable)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{arjunId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/{{bmwBookingId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{bmwBookingId}}",
+                "cancel"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 Validation, auth and errors",
+      "item": [
+        {
+          "name": "No X-User-Id header \u2192 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"{{swiftId}}\",\n  \"startDate\": \"{{plus9}}\",\n  \"endDate\": \"{{plus9}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wrong password \u2192 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"riya@mail.com\",\n  \"password\": \"wrong-pass\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer adds a car \u2192 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{riyaId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vehicles/cars",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles",
+                "cars"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"registrationNo\": \"MH12XX0000\",\n  \"brand\": \"Kia\",\n  \"model\": \"Seltos\",\n  \"fuelType\": \"PETROL\",\n  \"pricePerDay\": 3000,\n  \"branchId\": 1,\n  \"carType\": \"SUV\",\n  \"transmission\": \"MANUAL\",\n  \"seats\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 403\", () => pm.response.to.have.status(403));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start date in the past \u2192 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{riyaId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"{{swiftId}}\",\n  \"startDate\": \"{{yesterday}}\",\n  \"endDate\": \"{{today}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid payment method \u2192 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{riyaId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/{{bookingId}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{bookingId}}",
+                "payments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"BITCOIN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Lists allowed values\", () => pm.expect(res.message).to.include(\"CARD, UPI, CASH\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer without licence \u2192 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"No Licence\",\n  \"email\": \"nolicence@mail.com\",\n  \"phone\": \"9000000099\",\n  \"password\": \"secret12\",\n  \"role\": \"CUSTOMER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown booking \u2192 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/99999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "99999"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 404\", () => pm.response.to.have.status(404));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete booking cannot be cancelled \u2192 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{riyaId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/{{bookingId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{bookingId}}",
+                "cancel"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 409\", () => pm.response.to.have.status(409));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 Admin: branches and fleet",
+      "item": [
+        {
+          "name": "Create a branch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{adminId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/branches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "branches"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Baner Hub\",\n  \"address\": \"Baner Road\",\n  \"city\": \"Pune\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add a car",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{adminId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vehicles/cars",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles",
+                "cars"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"registrationNo\": \"{{newReg}}\",\n  \"brand\": \"Kia\",\n  \"model\": \"Seltos\",\n  \"fuelType\": \"PETROL\",\n  \"pricePerDay\": 3000,\n  \"branchId\": \"{{branchId}}\",\n  \"carType\": \"SUV\",\n  \"transmission\": \"MANUAL\",\n  \"seats\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.collectionVariables.set(\"newCarId\", res.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Same registration again \u2192 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{adminId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vehicles/cars",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles",
+                "cars"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"registrationNo\": \"{{newReg}}\",\n  \"brand\": \"Kia\",\n  \"model\": \"Seltos\",\n  \"fuelType\": \"PETROL\",\n  \"pricePerDay\": 3000,\n  \"branchId\": \"{{branchId}}\",\n  \"carType\": \"SUV\",\n  \"transmission\": \"MANUAL\",\n  \"seats\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 409\", () => pm.response.to.have.status(409));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Put the new car under maintenance",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{adminId}}",
+                "description": "Acting user (stands in for a JWT)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vehicles/{{newCarId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles",
+                "{{newCarId}}",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"UNDER_MAINTENANCE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Status changed\", () => pm.expect(res.data.status).to.eql(\"UNDER_MAINTENANCE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search no longer shows it",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vehicles/search?branchId={{branchId}}&startDate={{plus25}}&endDate={{plus25}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "branchId",
+                  "value": "{{branchId}}"
+                },
+                {
+                  "key": "startDate",
+                  "value": "{{plus25}}"
+                },
+                {
+                  "key": "endDate",
+                  "value": "{{plus25}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"New car hidden\", () => pm.expect(res.data.map(v => v.id)).to.not.include(pm.collectionVariables.get(\"newCarId\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register a new customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Neha Patil\",\n  \"email\": \"{{newEmail}}\",\n  \"phone\": \"9000000010\",\n  \"password\": \"neha@123\",\n  \"drivingLicenseNo\": \"MH1220200009999\",\n  \"role\": \"CUSTOMER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 History",
+      "item": [
+        {
+          "name": "Riya's booking history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{riyaId}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "{{riyaId}}",
+                "bookings"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test(\"Envelope has traceId\", () => pm.expect(res.traceId).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"Only Riya's bookings\", () => res.data.forEach(b => pm.expect(b.userId).to.eql(Number(pm.collectionVariables.get(\"riyaId\"))))); "
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "adminId",
+      "value": "1"
+    },
+    {
+      "key": "riyaId",
+      "value": "2"
+    },
+    {
+      "key": "arjunId",
+      "value": "3"
+    },
+    {
+      "key": "branchId",
+      "value": "1"
+    },
+    {
+      "key": "swiftId",
+      "value": "1"
+    },
+    {
+      "key": "cretaId",
+      "value": "2"
+    },
+    {
+      "key": "nexonId",
+      "value": "3"
+    },
+    {
+      "key": "bmwId",
+      "value": "5"
+    }
+  ]
+}

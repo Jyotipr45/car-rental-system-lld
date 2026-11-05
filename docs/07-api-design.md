@@ -1,10 +1,12 @@
 # 7. API Design
 
-The controllers are written as plain Java methods, but each one maps to a REST endpoint. This is the contract a Spring Boot port would expose. All responses use the `ApiResponse` envelope.
+The API is **live**: start `ApiServerApplication` (or `server.bat`) and it serves these endpoints on http://localhost:8080, with the OpenAPI 3.1 contract at `/openapi.yaml` and Swagger UI at `/swagger-ui`. How to test it: **[10-api-testing-guide.md](10-api-testing-guide.md)**.
+
+The acting user is sent in the **`X-User-Id`** header (a stand-in for a JWT). All responses use the `ApiResponse` envelope, which includes a `traceId` (also in the `X-Trace-Id` header).
 
 ```json
-{ "status": 201, "success": true, "message": "Created", "data": { ... } }
-{ "status": 409, "success": false, "message": "Vehicle 3 is already booked between 2026-11-11 and 2026-11-14", "data": null }
+{ "status": 201, "success": true, "message": "Created", "data": { ... }, "traceId": "6e03dea2" }
+{ "status": 409, "success": false, "message": "Vehicle 3 is already booked between 2026-11-11 and 2026-11-14", "data": null, "traceId": "7d8a0a17" }
 ```
 
 ## 7.1 Endpoints
@@ -15,6 +17,7 @@ The controllers are written as plain Java methods, but each one maps to a REST e
 | POST | `/api/v1/auth/login` | anyone | `AuthController.login` | 200 |
 | POST | `/api/v1/branches` | admin | `BranchController.create` | 201 |
 | GET | `/api/v1/branches` | anyone | `BranchController.list` | 200 |
+| GET | `/api/v1/branches/{id}/vehicles` | anyone | `VehicleController.listByBranch` | 200 |
 | POST | `/api/v1/vehicles/cars` | admin | `VehicleController.addCar` | 201 |
 | POST | `/api/v1/vehicles/bikes` | admin | `VehicleController.addBike` | 201 |
 | PATCH | `/api/v1/vehicles/{id}/status` | admin | `VehicleController.changeStatus` | 200 |
@@ -35,7 +38,8 @@ Why `POST /bookings/{id}/cancel` and not `DELETE /bookings/{id}`? A cancelled bo
 **Create booking**
 ```http
 POST /api/v1/bookings
-{ "userId": 2, "vehicleId": 3, "startDate": "2026-11-10", "endDate": "2026-11-12" }
+X-User-Id: 2
+{ "vehicleId": 3, "startDate": "2026-11-10", "endDate": "2026-11-12" }
 ```
 ```json
 { "status": 201, "success": true, "message": "Created",
@@ -46,12 +50,14 @@ POST /api/v1/bookings
 **Pay**
 ```http
 POST /api/v1/bookings/2/payments
-{ "userId": 2, "method": "UPI" }
+X-User-Id: 2
+{ "method": "UPI" }
 ```
 
 **Return (late)**
 ```http
 POST /api/v1/bookings/1/return
+X-User-Id: 1
 { "returnTime": "2026-11-09T11:00:00", "lateFeeMethod": "CARD" }
 ```
 
@@ -67,6 +73,8 @@ POST /api/v1/bookings/1/return
 | 409 | `VehicleNotAvailableException` | Overlapping booking or vehicle out of service |
 | 409 | `DuplicateResourceException` | Email or registration number already exists |
 | 409 | `InvalidBookingStateException` | Illegal transition (pickup a cancelled booking, pay twice) |
+| 405 | (router) | Wrong HTTP method for a known path; the `Allow` header lists the valid ones |
 | 500 | anything else | A bug; details are logged, not returned |
 
-In a real API, `userId`/`adminId` would come from the authenticated JWT, not from the request body.
+
+In a real API, the acting user would come from a verified JWT instead of the `X-User-Id` header.

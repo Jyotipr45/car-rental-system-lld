@@ -15,4 +15,5 @@ esac
 rm -rf out && mkdir -p out
 find src/main/java -name '*.java' > out/sources.txt
 javac --release 17 -encoding UTF-8 -d out/classes @out/sources.txt
+cp -r src/main/resources/. out/classes/
 java $LOG_OPTS -cp out/classes com.jyoti.carrental.CarRentalApplication

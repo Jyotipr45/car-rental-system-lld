@@ -47,6 +47,7 @@ Short version: **interface = "can do"**, **abstract class = "is a" + shared code
 | Payments | `CardPaymentProcessor`, `UpiPaymentProcessor`, `CashPaymentProcessor`, `PaymentProcessorFactory` |
 | Controllers | `AuthController`, `BranchController`, `VehicleController`, `BookingController`, `GlobalExceptionHandler` |
 | Infrastructure | `VehicleLockManager`, `PendingBookingCleanupJob`, `ConsoleNotificationListener` |
+| Web (HTTP adapter) | `HttpApiServer`, `Router` (+ records `Route`, `Match`), `ApiRequest`, `Json`, `DemoDataSeeder` |
 | Logging | `AuditLogger` (injected), `LogFormatter` (extends JUL `Formatter`), `LoggingConfig`, `TraceContext`, `LogSanitizer` (final utilities) |
 | Utilities (final, private constructor) | `PasswordHasher`, `Validate`, `BookingRules` |
 | Exceptions | `InvalidRequestException` (400), `AuthenticationException` (401), `PaymentFailedException` (402), `AccessDeniedException` (403), `ResourceNotFoundException` (404), `VehicleNotAvailableException`, `DuplicateResourceException`, `InvalidBookingStateException` (409) |

@@ -2,7 +2,7 @@
 
 A small but complete **car rental backend** built to learn how a real system is **structured and designed before it is coded**: requirements, entities, relationships, layers, interfaces vs. abstract classes, enums, design patterns, and the hard part (no double booking under concurrency).
 
-Plain **Java 17**, **zero dependencies**, **36 passing tests**, structured **logging with request tracing and an audit trail**, and an end-to-end demo that walks through every requirement.
+Plain **Java 17**, **zero dependencies**, **42 passing tests**, a **REST API with OpenAPI 3.1 + Swagger UI** you can test from Postman or Requestly, structured **logging with request tracing and an audit trail**, and an end-to-end demo that walks through every requirement.
 
 > Author: **Jyoti Prakash Parida**
 
@@ -51,6 +51,23 @@ Layered architecture: **Controller → Service → Repository**, with every depe
 | 7 | [API Design](docs/07-api-design.md) | REST endpoints, sample requests, error codes |
 | 8 | [Decisions & Roadmap](docs/08-design-decisions-and-roadmap.md) | Step-by-step design procedure, trade-offs, limitations, roadmap |
 | 9 | [Logging, Tracing & Audit](docs/09-logging-and-audit.md) | Log levels, trace ids, audit trail format, what never to log, Spring equivalent |
+| 10 | [**API Testing Guide**](docs/10-api-testing-guide.md) | Run the REST API; test with Swagger UI, Postman, Requestly, curl; 21-step manual checklist |
+
+## 🌐 Test it as a REST API (Swagger UI · Postman · Requestly)
+
+```bat
+server.bat                      :: or run ApiServerApplication in IntelliJ
+```
+
+| Open | What |
+|---|---|
+| http://localhost:8080/swagger-ui | Interactive docs: **Authorize** with a user id (1 admin, 2 Riya, 3 Arjun) → **Try it out** |
+| http://localhost:8080/openapi.yaml | OpenAPI 3.1 contract |
+| `postman/CarRental.postman_collection.json` | Import into **Postman** or **Requestly**: 41 requests, 106 automatic checks, re-runnable |
+
+![Swagger UI](docs/images/swagger-ui.png)
+
+Step-by-step instructions: **[docs/10-api-testing-guide.md](docs/10-api-testing-guide.md)**.
 
 ## 🚀 Getting started
 
@@ -85,7 +102,7 @@ test.bat
 ./test.sh
 ```
 
-Expected: `CarRentalSystemTest: 29 passed, 0 failed` and `LoggingAndAuditTest: 7 passed, 0 failed`
+Expected: `CarRentalSystemTest: 29 passed`, `LoggingAndAuditTest: 7 passed`, `HttpApiTest: 6 passed` (0 failed). In IntelliJ, run `AllTests.main()`.
 
 ### Demo output (excerpt)
 
@@ -107,9 +124,12 @@ Expected: `CarRentalSystemTest: 29 passed, 0 failed` and `LoggingAndAuditTest: 7
 
 ```
 car-rental-system-lld/
-├── docs/                                  design documentation (9 files + diagrams/)
+├── docs/                                  design documentation (10 files + diagrams/ + images/)
+├── postman/                               Postman / Requestly collection + environment
 ├── src/main/java/com/jyoti/carrental/
-│   ├── CarRentalApplication.java          demo entry point
+│   ├── CarRentalApplication.java          console demo entry point
+│   ├── ApiServerApplication.java          REST API entry point (http://localhost:8080)
+│   ├── web/                               HTTP server, router, JSON, seed data
 │   ├── config/CarRentalSystem.java        singleton composition root
 │   ├── controller/                        REST-style controllers + exception handler
 │   ├── dto/request, dto/response/         validated input / output records
@@ -123,9 +143,10 @@ car-rental-system-lld/
 │   ├── exception/                         typed business exceptions
 │   ├── logging/                           trace ids, log format, audit trail, data masking
 │   └── util/                              password hashing, validation, vehicle locks
-├── src/test/java/com/jyoti/carrental/     36 tests (behaviour + logging/audit) + mini test runner
+├── src/main/resources/                    openapi.yaml + Swagger UI page
+├── src/test/java/com/jyoti/carrental/     42 tests (behaviour, logging/audit, HTTP) + mini test runner
 ├── pom.xml
-├── run.bat / run.sh / test.bat / test.sh
+├── run.bat / test.bat / server.bat (+ .sh versions)
 └── LICENSE
 ```
 

@@ -18,5 +18,8 @@ public final class AllTests {
         System.out.println();
         System.out.println("== LoggingAndAuditTest ==");
         MiniTest.run(LoggingAndAuditTest.class);
+        System.out.println();
+        System.out.println("== HttpApiTest ==");
+        MiniTest.run(HttpApiTest.class);
     }
 }

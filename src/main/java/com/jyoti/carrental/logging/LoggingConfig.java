@@ -51,8 +51,13 @@ public final class LoggingConfig {
 
     /** Reads level, console level and directory from system properties / env vars, then initialises. */
     public static void initFromEnvironment() {
+        initFromEnvironment("ERROR");
+    }
+
+    /** Same, with a different default console level (the API server shows INFO request lines). */
+    public static void initFromEnvironment(String defaultConsoleLevel) {
         Level level = parseLevel(setting("log.level", "LOG_LEVEL", "INFO"));
-        Level console = parseLevel(setting("log.console", "LOG_CONSOLE", "ERROR"));
+        Level console = parseLevel(setting("log.console", "LOG_CONSOLE", defaultConsoleLevel));
         Path dir = Path.of(setting("log.dir", "LOG_DIR", "logs"));
         init(level, console, dir);
     }

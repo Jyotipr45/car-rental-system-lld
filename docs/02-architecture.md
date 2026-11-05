@@ -20,7 +20,9 @@ Each layer has one job and may only call the layer directly below it. Dependenci
 
 ```
 com.jyoti.carrental
-├── CarRentalApplication.java        entry point: end-to-end demo
+├── CarRentalApplication.java        entry point: end-to-end console demo
+├── ApiServerApplication.java        entry point: REST API on http://localhost:8080
+├── web/                             HttpApiServer, Router, ApiRequest, Json, DemoDataSeeder (HTTP adapter)
 ├── config/
 │   └── CarRentalSystem              singleton composition root (the "Spring container")
 ├── controller/                      presentation layer
@@ -75,6 +77,8 @@ The plain-Java design is a one-to-one blueprint for a Spring Boot service:
 | `CarRentalSystem` builds and wires objects | Spring IoC container, `@Configuration` / component scan |
 | Objects created once in `CarRentalSystem` | Beans with default **singleton** scope |
 | `XxxController` methods with `// POST /api/v1/...` | `@RestController` + `@PostMapping` |
+| `web.HttpApiServer` + `Router` (JDK HTTP server) | Embedded Tomcat + Spring MVC dispatcher |
+| Hand-written `openapi.yaml` + Swagger UI page | springdoc-openapi (generated spec + Swagger UI) |
 | `GlobalExceptionHandler.handle` | `@RestControllerAdvice` + `@ExceptionHandler` |
 | `Validate` in record constructors | `@Valid` + `@NotBlank`, `@Email`, `@Positive` |
 | `CrudRepository` / `InMemoryRepository` | `JpaRepository<T, Long>` |

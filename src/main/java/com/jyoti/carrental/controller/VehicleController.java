@@ -41,6 +41,12 @@ public class VehicleController {
         return handler.handle("PATCH /api/v1/vehicles/{id}/status", 200, () -> VehicleResponse.from(vehicleService.changeStatus(adminId, vehicleId, status)));
     }
 
+    /** GET /api/v1/branches/{id}/vehicles */
+    public ApiResponse<List<VehicleResponse>> listByBranch(Long branchId) {
+        return handler.handle("GET /api/v1/branches/{id}/vehicles", 200, () -> vehicleService.getVehiclesByBranch(branchId)
+                .stream().map(VehicleResponse::from).toList());
+    }
+
     /** GET /api/v1/vehicles/search?branchId=&amp;start=&amp;end=&amp;category=&amp;carType=&amp;minSeats= */
     public ApiResponse<List<VehicleResponse>> search(Supplier<VehicleSearchRequest> request) {
         return handler.handle("GET /api/v1/vehicles/search", 200, () -> vehicleService.searchAvailable(request.get()).stream()

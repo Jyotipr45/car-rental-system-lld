@@ -1,0 +1,651 @@
+openapi: 3.1.0
+# Car Rental System API contract.
+# Served live at http://localhost:8080/openapi.yaml and rendered by Swagger UI at /swagger-ui.
+# Import this file into Postman or Requestly to generate a request collection automatically.
+# Author: Jyoti Prakash Parida
+info:
+  title: Car Rental System API
+  version: 1.0.0
+  summary: Low-level design of a car rental backend, exposed as a REST API for manual testing.
+  description: |
+    Search vehicles, book, pay, pick up, return and cancel, with no double booking.
+
+    **Who is calling?** Send the acting user's id in the `X-User-Id` header
+    (click **Authorize** above and enter it once). This stands in for a JWT.
+
+    **Seeded data** (when the server starts with `seed=true`, the default):
+
+    | Id | Who / what | Login |
+    |---|---|---|
+    | user 1 | Admin | admin@rental.com / admin@123 |
+    | user 2 | Riya (customer) | riya@mail.com / riya@123 |
+    | user 3 | Arjun (customer) | arjun@mail.com / arjun@123 |
+    | branch 1 | Hinjewadi Hub, Pune | |
+    | vehicles 1–5 | Swift Rs.1800 · Creta Rs.3200 · Nexon EV Rs.2800 · Classic 350 (bike) Rs.900 · BMW 7 Rs.40000 | |
+
+    **Every response** is wrapped in the same envelope and carries a `traceId`
+    (also in the `X-Trace-Id` header). Search for `trace=<id>` in `logs/car-rental-0.log`
+    to see everything that request did.
+
+    Dates are `YYYY-MM-DD`; both start and end dates are rental days (10–12 Nov = 3 days).
+  contact:
+    name: Jyoti Prakash Parida
+    url: https://github.com/Jyotipr45/car-rental-system-lld
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: http://localhost:8080
+    description: Local server (server.bat / ApiServerApplication)
+
+security:
+  - userId: []
+
+tags:
+  - name: Auth
+    description: Register and log in
+  - name: Branches
+    description: Rental locations (create is admin only)
+  - name: Vehicles
+    description: Fleet management (admin) and availability search (anyone)
+  - name: Bookings
+    description: Book, pay, cancel, pick up and return
+  - name: Users
+    description: Booking history
+
+paths:
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a customer or admin
+      description: Customers must give a driving licence number. Emails are unique.
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterUserRequest' }
+            examples:
+              customer:
+                summary: New customer
+                value: { name: Neha Patil, email: neha@mail.com, phone: "9000000010", password: neha@123, drivingLicenseNo: MH1220200009999, role: CUSTOMER }
+              noLicence:
+                summary: "Invalid: customer without licence (400)"
+                value: { name: No Licence, email: x@mail.com, phone: "9000000011", password: secret12, role: CUSTOMER }
+      responses:
+        '201': { $ref: '#/components/responses/UserCreated' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in
+      description: Returns the user (including the id to use in `X-User-Id`). Wrong email and wrong password give the same 401 message.
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+            examples:
+              riya: { summary: Riya (customer), value: { email: riya@mail.com, password: riya@123 } }
+              admin: { summary: Admin, value: { email: admin@rental.com, password: admin@123 } }
+              wrong: { summary: "Wrong password (401)", value: { email: riya@mail.com, password: nope1234 } }
+      responses:
+        '200': { $ref: '#/components/responses/UserOk' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/branches:
+    get:
+      tags: [Branches]
+      summary: List branches
+      operationId: listBranches
+      security: []
+      responses:
+        '200':
+          description: All branches
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BranchListEnvelope' }
+    post:
+      tags: [Branches]
+      summary: Create a branch (admin)
+      operationId: createBranch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateBranchRequest' }
+            example: { name: Baner Hub, address: Baner Road, city: Pune }
+      responses:
+        '201':
+          description: Branch created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BranchEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/v1/branches/{id}/vehicles:
+    get:
+      tags: [Branches]
+      summary: List every vehicle at a branch (any status)
+      operationId: listBranchVehicles
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/VehicleList' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/vehicles/cars:
+    post:
+      tags: [Vehicles]
+      summary: Add a car (admin)
+      operationId: addCar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddCarRequest' }
+            example: { registrationNo: MH12ZZ4321, brand: Kia, model: Seltos, fuelType: PETROL, pricePerDay: 3000, branchId: 1, carType: SUV, transmission: MANUAL, seats: 5 }
+      responses:
+        '201': { $ref: '#/components/responses/VehicleCreated' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/vehicles/bikes:
+    post:
+      tags: [Vehicles]
+      summary: Add a bike (admin)
+      operationId: addBike
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddBikeRequest' }
+            example: { registrationNo: MH12BB7777, brand: Honda, model: Activa, fuelType: PETROL, pricePerDay: 500, branchId: 1, engineCc: 110 }
+      responses:
+        '201': { $ref: '#/components/responses/VehicleCreated' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/vehicles/{id}/status:
+    patch:
+      tags: [Vehicles]
+      summary: Change a vehicle's status (admin)
+      description: A vehicle that is not AVAILABLE disappears from search and cannot be booked or handed over.
+      operationId: changeVehicleStatus
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: '#/components/schemas/VehicleStatus' }
+            example: { status: UNDER_MAINTENANCE }
+      responses:
+        '200':
+          description: Updated vehicle
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VehicleEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/vehicles/search:
+    get:
+      tags: [Vehicles]
+      summary: Search vehicles free for the dates
+      description: Returns rentable vehicles at the branch with no active booking overlapping the dates, cheapest first.
+      operationId: searchVehicles
+      security: []
+      parameters:
+        - { name: branchId, in: query, required: true, schema: { type: integer, format: int64, example: 1 } }
+        - { name: startDate, in: query, required: true, schema: { type: string, format: date }, description: "First rental day, not in the past" }
+        - { name: endDate, in: query, required: true, schema: { type: string, format: date }, description: "Last rental day (inclusive)" }
+        - { name: category, in: query, schema: { $ref: '#/components/schemas/VehicleCategory' } }
+        - { name: carType, in: query, schema: { $ref: '#/components/schemas/CarType' } }
+        - { name: minSeats, in: query, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { $ref: '#/components/responses/VehicleList' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/bookings:
+    post:
+      tags: [Bookings]
+      summary: Create a booking (customer)
+      description: |
+        The caller (`X-User-Id`) must be a customer. Availability is re-checked under a per-vehicle lock,
+        so two people can never book the same vehicle for overlapping dates. New bookings are
+        `PENDING_PAYMENT` and expire if unpaid for 15 minutes.
+      operationId: createBooking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateBookingRequest' }
+            example: { vehicleId: 2, startDate: "2026-11-10", endDate: "2026-11-12" }
+      responses:
+        '201':
+          description: Booking created, waiting for payment
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookingEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/bookings/{id}:
+    get:
+      tags: [Bookings]
+      summary: Get a booking
+      operationId: getBooking
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The booking
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookingEnvelope' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/bookings/{id}/payments:
+    get:
+      tags: [Bookings]
+      summary: List a booking's payments
+      description: Includes failed attempts, refunds and late-fee payments.
+      operationId: listPayments
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Payments, oldest first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentListEnvelope' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Bookings]
+      summary: Pay for a booking (owner)
+      description: |
+        Success moves the booking to `CONFIRMED`. A decline (e.g. UPI above Rs.1,00,000) returns 402 and the
+        booking stays `PENDING_PAYMENT` so the customer can retry with another method.
+      operationId: payBooking
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [method]
+              properties:
+                method: { $ref: '#/components/schemas/PaymentMethod' }
+            examples:
+              upi: { value: { method: UPI } }
+              card: { value: { method: CARD } }
+      responses:
+        '201':
+          description: Payment succeeded, booking confirmed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/bookings/{id}/cancel:
+    post:
+      tags: [Bookings]
+      summary: Cancel a booking (owner or admin)
+      description: Allowed before pickup only. A paid booking is refunded in full.
+      operationId: cancelBooking
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Booking cancelled
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookingEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/bookings/{id}/pickup:
+    post:
+      tags: [Bookings]
+      summary: Hand the vehicle over (admin)
+      description: Only CONFIRMED bookings, on or after the start date and not after the end date.
+      operationId: pickupBooking
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Booking is now ONGOING
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookingEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/bookings/{id}/return:
+    post:
+      tags: [Bookings]
+      summary: Receive the vehicle back (admin)
+      description: |
+        Returning after the end date charges a late fee of late days × daily rate × 1.5,
+        collected with `lateFeeMethod` (default CASH).
+      operationId: returnBooking
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [returnTime]
+              properties:
+                returnTime: { type: string, format: date-time, description: "Local date-time without zone, e.g. 2026-11-09T11:00:00" }
+                lateFeeMethod: { $ref: '#/components/schemas/PaymentMethod' }
+            example: { returnTime: "2026-11-09T11:00:00", lateFeeMethod: CARD }
+      responses:
+        '200':
+          description: Booking COMPLETED (lateFee and totalAmount filled in)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookingEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/users/{userId}/bookings:
+    get:
+      tags: [Users]
+      summary: A user's booking history
+      operationId: userBookings
+      security: []
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: integer, format: int64, example: 2 } }
+      responses:
+        '200':
+          description: Bookings, oldest first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookingListEnvelope' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    userId:
+      type: apiKey
+      in: header
+      name: X-User-Id
+      description: Id of the user making the call (1 = admin, 2 = Riya, 3 = Arjun in seeded data). Stands in for a JWT.
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64, example: 1 }
+
+  headers:
+    TraceId:
+      description: Request trace id; search `trace=<id>` in logs/car-rental-0.log
+      schema: { type: string, example: 3f9a1c2b }
+
+  responses:
+    UserCreated:
+      description: User registered
+      headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/UserEnvelope' }
+    UserOk:
+      description: Logged in
+      headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/UserEnvelope' }
+    VehicleCreated:
+      description: Vehicle added
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/VehicleEnvelope' }
+    VehicleList:
+      description: Vehicles
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/VehicleListEnvelope' }
+    BadRequest:
+      description: Invalid input (blank field, bad date, past start date, rental over 30 days, malformed JSON, unknown enum value)
+      headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example: { status: 400, success: false, message: Start date cannot be in the past, data: null, traceId: c7f158c1 }
+    Unauthorized:
+      description: Missing/invalid X-User-Id header, or wrong login
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example: { status: 401, success: false, message: Missing X-User-Id header (the id of the user making the call), data: null, traceId: a8c64827 }
+    PaymentRequired:
+      description: Payment declined by the gateway
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example: { status: 402, success: false, message: "Payment declined: UPI limit exceeded (max Rs.100000 per transaction)", data: null, traceId: 6dce4e00 }
+    Forbidden:
+      description: Role or ownership does not allow this action
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example: { status: 403, success: false, message: Only admins can perform this action, data: null, traceId: 1ff1fdba }
+    NotFound:
+      description: Unknown id
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example: { status: 404, success: false, message: "Booking not found: 99", data: null, traceId: 0a1b2c3d }
+    Conflict:
+      description: Vehicle already booked for overlapping dates, duplicate email/registration, or illegal state change
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example: { status: 409, success: false, message: Vehicle 3 is already booked between 2026-11-11 and 2026-11-14, data: null, traceId: 7d8a0a17 }
+
+  schemas:
+    # ---------------------------------------------------------------- enums
+    UserRole: { type: string, enum: [CUSTOMER, ADMIN] }
+    VehicleCategory: { type: string, enum: [CAR, BIKE] }
+    CarType: { type: string, enum: [HATCHBACK, SEDAN, SUV, LUXURY] }
+    FuelType: { type: string, enum: [PETROL, DIESEL, ELECTRIC, CNG] }
+    TransmissionType: { type: string, enum: [MANUAL, AUTOMATIC] }
+    VehicleStatus: { type: string, enum: [AVAILABLE, UNDER_MAINTENANCE, INACTIVE] }
+    BookingStatus:
+      type: string
+      enum: [PENDING_PAYMENT, CONFIRMED, ONGOING, COMPLETED, CANCELLED]
+      description: "PENDING_PAYMENT → CONFIRMED → ONGOING → COMPLETED; PENDING_PAYMENT/CONFIRMED → CANCELLED"
+    PaymentMethod: { type: string, enum: [CARD, UPI, CASH] }
+    PaymentPurpose: { type: string, enum: [RENTAL, LATE_FEE] }
+    PaymentStatus: { type: string, enum: [PENDING, SUCCESS, FAILED, REFUNDED] }
+
+    # ---------------------------------------------------------------- requests
+    RegisterUserRequest:
+      type: object
+      required: [name, email, phone, password, role]
+      properties:
+        name: { type: string, example: Neha Patil }
+        email: { type: string, format: email, example: neha@mail.com }
+        phone: { type: string, example: "9000000010" }
+        password: { type: string, minLength: 6, writeOnly: true, example: neha@123 }
+        drivingLicenseNo: { type: string, description: Required for customers, example: MH1220200009999 }
+        role: { $ref: '#/components/schemas/UserRole' }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, writeOnly: true }
+    CreateBranchRequest:
+      type: object
+      required: [name, address, city]
+      properties:
+        name: { type: string }
+        address: { type: string }
+        city: { type: string }
+    AddCarRequest:
+      type: object
+      required: [registrationNo, brand, model, fuelType, pricePerDay, branchId, carType, transmission, seats]
+      properties:
+        registrationNo: { type: string, description: Unique number plate, example: MH12ZZ4321 }
+        brand: { type: string }
+        model: { type: string }
+        fuelType: { $ref: '#/components/schemas/FuelType' }
+        pricePerDay: { type: number, exclusiveMinimum: 0, example: 3000 }
+        branchId: { type: integer, format: int64 }
+        carType: { $ref: '#/components/schemas/CarType' }
+        transmission: { $ref: '#/components/schemas/TransmissionType' }
+        seats: { type: integer, minimum: 1 }
+    AddBikeRequest:
+      type: object
+      required: [registrationNo, brand, model, fuelType, pricePerDay, branchId, engineCc]
+      properties:
+        registrationNo: { type: string }
+        brand: { type: string }
+        model: { type: string }
+        fuelType: { $ref: '#/components/schemas/FuelType' }
+        pricePerDay: { type: number, exclusiveMinimum: 0 }
+        branchId: { type: integer, format: int64 }
+        engineCc: { type: integer, minimum: 1 }
+    CreateBookingRequest:
+      type: object
+      description: The customer is taken from the X-User-Id header.
+      required: [vehicleId, startDate, endDate]
+      properties:
+        vehicleId: { type: integer, format: int64, example: 2 }
+        startDate: { type: string, format: date, description: "Not in the past; at most 90 days ahead" }
+        endDate: { type: string, format: date, description: "Inclusive; rental at most 30 days" }
+
+    # ---------------------------------------------------------------- resources
+    User:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        email: { type: string }
+        role: { $ref: '#/components/schemas/UserRole' }
+    Branch:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        address: { type: string }
+        city: { type: string }
+    Vehicle:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        category: { $ref: '#/components/schemas/VehicleCategory' }
+        registrationNo: { type: string }
+        brand: { type: string }
+        model: { type: string }
+        type: { type: string, description: "Car type (HATCHBACK, SEDAN, SUV, LUXURY) or BIKE" }
+        seats: { type: integer }
+        pricePerDay: { type: number }
+        status: { $ref: '#/components/schemas/VehicleStatus' }
+        branchId: { type: integer, format: int64 }
+    Booking:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        userId: { type: integer, format: int64 }
+        vehicleId: { type: integer, format: int64 }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        baseAmount: { type: number, example: 9600.00 }
+        lateFee: { type: number, example: 0 }
+        totalAmount: { type: number, example: 9600.00 }
+        status: { $ref: '#/components/schemas/BookingStatus' }
+    Payment:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        bookingId: { type: integer, format: int64 }
+        amount: { type: number }
+        method: { $ref: '#/components/schemas/PaymentMethod' }
+        purpose: { $ref: '#/components/schemas/PaymentPurpose' }
+        status: { $ref: '#/components/schemas/PaymentStatus' }
+        transactionRef: { type: [string, 'null'], example: UPI-3F9A1C2B }
+
+    # ---------------------------------------------------------------- envelopes
+    Envelope:
+      type: object
+      description: Every response has this shape.
+      required: [status, success, message, traceId]
+      properties:
+        status: { type: integer, description: Same as the HTTP status }
+        success: { type: boolean }
+        message: { type: string }
+        traceId: { type: string, description: "Search trace=<id> in the logs", example: 3f9a1c2b }
+    ErrorEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data: { type: 'null' }
+    UserEnvelope:
+      allOf: [{ $ref: '#/components/schemas/Envelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/User' } } }]
+    BranchEnvelope:
+      allOf: [{ $ref: '#/components/schemas/Envelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Branch' } } }]
+    BranchListEnvelope:
+      allOf: [{ $ref: '#/components/schemas/Envelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Branch' } } } }]
+    VehicleEnvelope:
+      allOf: [{ $ref: '#/components/schemas/Envelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Vehicle' } } }]
+    VehicleListEnvelope:
+      allOf: [{ $ref: '#/components/schemas/Envelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Vehicle' } } } }]
+    BookingEnvelope:
+      allOf: [{ $ref: '#/components/schemas/Envelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Booking' } } }]
+    BookingListEnvelope:
+      allOf: [{ $ref: '#/components/schemas/Envelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Booking' } } } }]
+    PaymentEnvelope:
+      allOf: [{ $ref: '#/components/schemas/Envelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Payment' } } }]
+    PaymentListEnvelope:
+      allOf: [{ $ref: '#/components/schemas/Envelope' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Payment' } } } }]

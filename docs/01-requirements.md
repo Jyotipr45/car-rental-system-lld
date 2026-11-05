@@ -34,6 +34,7 @@ A customer picks a vehicle at a branch for a date range, pays, picks it up, uses
 | FR-13 | A customer can view their **booking history** and a booking's **payments**. | `BookingServiceImpl.getUserBookings / getPayments` |
 | FR-14 | Unpaid bookings **expire** automatically after 15 minutes, releasing the vehicle. | `PendingBookingCleanupJob` |
 | FR-15 | Interested parties are **notified** of booking events (created, confirmed, picked up, returned, cancelled, expired). | `BookingEventListener` |
+| FR-16 | All operations are available as a **REST API** documented with **OpenAPI 3.1**, testable from Swagger UI, Postman, Requestly or curl. | `HttpApiServer`, `openapi.yaml`, [10-api-testing-guide.md](10-api-testing-guide.md) |
 
 ### Business rules
 

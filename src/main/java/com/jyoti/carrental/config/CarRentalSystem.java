@@ -6,6 +6,7 @@ import com.jyoti.carrental.controller.BranchController;
 import com.jyoti.carrental.controller.GlobalExceptionHandler;
 import com.jyoti.carrental.controller.VehicleController;
 import com.jyoti.carrental.event.ConsoleNotificationListener;
+import com.jyoti.carrental.logging.AuditLogger;
 import com.jyoti.carrental.payment.CardPaymentProcessor;
 import com.jyoti.carrental.payment.CashPaymentProcessor;
 import com.jyoti.carrental.payment.PaymentProcessorFactory;
@@ -36,6 +37,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * The application's composition root: creates every object once and wires them together.
@@ -59,6 +61,8 @@ public final class CarRentalSystem {
 
     /** How long a customer has to pay before an unpaid booking is released. */
     public static final Duration PAYMENT_WINDOW = Duration.ofMinutes(15);
+
+    private static final Logger LOG = Logger.getLogger(CarRentalSystem.class.getName());
 
     private static volatile CarRentalSystem instance;
 
@@ -94,27 +98,33 @@ public final class CarRentalSystem {
         PaymentProcessorFactory processorFactory = new PaymentProcessorFactory(List.of(
                 new CardPaymentProcessor(), new UpiPaymentProcessor(), new CashPaymentProcessor()));
 
-        // 4. Services (business layer), dependencies passed through constructors
-        this.userService = new UserServiceImpl(userRepository);
-        this.branchService = new BranchServiceImpl(branchRepository, userService);
+        // 4. Audit trail, shared by every service
+        AuditLogger audit = new AuditLogger();
+
+        // 5. Services (business layer), dependencies passed through constructors
+        this.userService = new UserServiceImpl(userRepository, audit);
+        this.branchService = new BranchServiceImpl(branchRepository, userService, audit);
         this.vehicleService = new VehicleServiceImpl(vehicleRepository, bookingRepository,
-                branchService, userService, clock);
+                branchService, userService, audit, clock);
         this.paymentService = new PaymentServiceImpl(paymentRepository, processorFactory, clock);
         this.bookingService = new BookingServiceImpl(bookingRepository, userService, vehicleService,
-                paymentService, pricingStrategy, lateFeePolicy, new VehicleLockManager(), clock);
+                paymentService, pricingStrategy, lateFeePolicy, new VehicleLockManager(), audit, clock);
 
-        // 5. Observers
+        // 6. Observers
         bookingService.addListener(new ConsoleNotificationListener(consoleNotifications));
 
-        // 6. Controllers (presentation layer)
+        // 7. Controllers (presentation layer)
         GlobalExceptionHandler handler = new GlobalExceptionHandler();
         this.authController = new AuthController(userService, handler);
         this.branchController = new BranchController(branchService, handler);
         this.vehicleController = new VehicleController(vehicleService, handler);
         this.bookingController = new BookingController(bookingService, handler);
 
-        // 7. Background jobs
+        // 8. Background jobs
         this.cleanupJob = new PendingBookingCleanupJob(bookingService, PAYMENT_WINDOW);
+
+        LOG.info(() -> "CarRentalSystem started: pricing=" + pricingStrategy.name()
+                + ", late fee x1.5, payment window " + PAYMENT_WINDOW.toMinutes() + " min");
     }
 
     /** The one shared instance for the running application (real clock, console notifications on). */

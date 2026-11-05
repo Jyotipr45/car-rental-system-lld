@@ -25,11 +25,11 @@ public class BranchController {
 
     /** POST /api/v1/branches (admin) */
     public ApiResponse<BranchResponse> create(Long adminId, Supplier<CreateBranchRequest> request) {
-        return handler.handle(201, () -> BranchResponse.from(branchService.createBranch(adminId, request.get())));
+        return handler.handle("POST /api/v1/branches", 201, () -> BranchResponse.from(branchService.createBranch(adminId, request.get())));
     }
 
     /** GET /api/v1/branches */
     public ApiResponse<List<BranchResponse>> list() {
-        return handler.handle(200, () -> branchService.getAllBranches().stream().map(BranchResponse::from).toList());
+        return handler.handle("GET /api/v1/branches", 200, () -> branchService.getAllBranches().stream().map(BranchResponse::from).toList());
     }
 }

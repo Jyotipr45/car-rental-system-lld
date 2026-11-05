@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
+import java.util.logging.Logger;
 
 /**
  * Prevents double booking when two customers book the same vehicle at the same moment.
@@ -20,6 +21,10 @@ import java.util.function.Supplier;
  */
 public class VehicleLockManager {
 
+    private static final Logger LOG = Logger.getLogger(VehicleLockManager.class.getName());
+    /** Waits longer than this are logged at DEBUG as contention. */
+    private static final long CONTENTION_LOG_MS = 5;
+
     private final Map<Long, ReentrantLock> locks = new ConcurrentHashMap<>();
 
     /**
@@ -29,11 +34,20 @@ public class VehicleLockManager {
      */
     public <T> T withLock(Long vehicleId, Supplier<T> action) {
         ReentrantLock lock = locks.computeIfAbsent(vehicleId, id -> new ReentrantLock());
+        long waitStart = System.nanoTime();
+        LOG.finest(() -> "Acquiring lock Vehicle#" + vehicleId + (lock.isLocked() ? " (busy, waiting)" : ""));
         lock.lock();
+        long waitedMs = (System.nanoTime() - waitStart) / 1_000_000;
+        if (waitedMs >= CONTENTION_LOG_MS) {
+            LOG.fine(() -> "Lock Vehicle#" + vehicleId + " acquired after waiting " + waitedMs + " ms (contention)");
+        } else {
+            LOG.finest(() -> "Lock Vehicle#" + vehicleId + " acquired");
+        }
         try {
             return action.get();
         } finally {
             lock.unlock(); // always release, even when the action throws
+            LOG.finest(() -> "Lock Vehicle#" + vehicleId + " released");
         }
     }
 }

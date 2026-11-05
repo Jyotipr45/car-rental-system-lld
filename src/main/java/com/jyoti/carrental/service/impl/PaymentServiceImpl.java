@@ -15,14 +15,20 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Default {@link PaymentService}. Picks the processor through the factory, so this
  * class has no idea whether it is talking to Card, UPI or Cash.
  *
+ * <p>Logs every gateway outcome. The business audit (who paid) is written by
+ * {@code BookingServiceImpl}, which knows the user; this class knows only money.</p>
+ *
  * @author Jyoti Prakash Parida
  */
 public class PaymentServiceImpl implements PaymentService {
+
+    private static final Logger LOG = Logger.getLogger(PaymentServiceImpl.class.getName());
 
     private final PaymentRepository paymentRepository;
     private final PaymentProcessorFactory processorFactory;
@@ -38,15 +44,25 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public Payment charge(Long bookingId, BigDecimal amount, PaymentMethod method, PaymentPurpose purpose) {
         Payment payment = new Payment(bookingId, amount, method, purpose);
-        PaymentProcessor processor = processorFactory.getProcessor(method); // Factory → Strategy
-        PaymentResult result = processor.process(payment);
+        PaymentProcessor processor = processorFactory.getProcessor(method); // Factory -> Strategy
+        LOG.fine(() -> "Charging Rs." + amount + " " + purpose + " for Booking#" + bookingId
+                + " via " + processor.getClass().getSimpleName());
 
+        PaymentResult result = processor.process(payment);
         if (result.success()) {
             payment.markSuccess(result.transactionRef(), LocalDateTime.now(clock));
         } else {
             payment.markFailed(result.message());
         }
-        return paymentRepository.save(payment); // failed attempts are kept for audit too
+        Payment saved = paymentRepository.save(payment); // failed attempts are kept for audit too
+        if (result.success()) {
+            LOG.info(() -> "Payment#" + saved.getId() + " SUCCESS Rs." + amount + " " + method + " " + purpose
+                    + " for Booking#" + bookingId + " ref=" + saved.getTransactionRef());
+        } else {
+            LOG.warning(() -> "Payment#" + saved.getId() + " DECLINED Rs." + amount + " " + method
+                    + " for Booking#" + bookingId + ": " + result.message());
+        }
+        return saved;
     }
 
     @Override
@@ -59,6 +75,11 @@ public class PaymentServiceImpl implements PaymentService {
                     p.markRefunded();
                     paymentRepository.save(p);
                     refunded.add(p);
+                    LOG.info(() -> "Payment#" + p.getId() + " refunded Rs." + p.getAmount() + " ref=" + result.transactionRef());
+                } else {
+                    // Money owed back to a customer is never silently ignored.
+                    LOG.severe(() -> "Refund FAILED for Payment#" + p.getId() + " Booking#" + bookingId
+                            + ": " + result.message() + " - needs manual follow-up");
                 }
             }
         }

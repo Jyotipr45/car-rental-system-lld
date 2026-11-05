@@ -21,15 +21,17 @@ import java.util.logging.Logger;
  */
 public abstract class AbstractPaymentProcessor implements PaymentProcessor {
 
-    private static final Logger LOG = Logger.getLogger(AbstractPaymentProcessor.class.getName());
+    /** Named after the concrete class, e.g. {@code UpiPaymentProcessor}, so logs show which gateway ran. */
+    private final Logger log = Logger.getLogger(getClass().getName());
 
     @Override
     public final PaymentResult process(Payment payment) {
         if (payment.getAmount() == null || payment.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            log.warning(() -> "Rejected payment with invalid amount " + payment.getAmount());
             return PaymentResult.failure("Amount must be greater than zero");
         }
         PaymentResult result = doProcess(payment);
-        LOG.fine(() -> supportedMethod() + " payment for booking " + payment.getBookingId()
+        log.fine(() -> supportedMethod() + " payment for booking " + payment.getBookingId()
                 + " -> " + (result.success() ? "SUCCESS " + result.transactionRef() : "FAILED " + result.message()));
         return result;
     }
@@ -40,7 +42,7 @@ public abstract class AbstractPaymentProcessor implements PaymentProcessor {
             return PaymentResult.failure("Nothing to refund: payment never succeeded");
         }
         PaymentResult result = doRefund(payment);
-        LOG.fine(() -> supportedMethod() + " refund for " + payment.getTransactionRef() + " -> " + result.success());
+        log.fine(() -> supportedMethod() + " refund for " + payment.getTransactionRef() + " -> " + result.success());
         return result;
     }
 

@@ -41,6 +41,7 @@ com.jyoti.carrental
 ├── model/                           BaseEntity, User, Branch, Vehicle, Car, Bike, Booking, Payment
 │   └── enums/                       9 enums
 ├── exception/                       CarRentalException + 8 subclasses
+├── logging/                         TraceContext, LogFormatter, LoggingConfig, AuditLogger, AuditAction, AuditOutcome, LogSanitizer
 └── util/                            PasswordHasher, Validate, VehicleLockManager
 ```
 
@@ -61,6 +62,8 @@ There are **no cycles**. `PaymentService` does not know booking states. `Booking
 | **Concurrency** | Every booking mutation runs under that vehicle's lock. Repositories use concurrent collections. |
 | **Time** | Every class that needs "now" receives a `java.time.Clock`. Tests move a `MutableClock` instead of sleeping. |
 | **Security** | Salted password hashes, role checks in services (not controllers, so no endpoint can bypass them), identical login error messages. |
+| **Logging & tracing** | One logger per class; each request gets a trace id (`TraceContext`) that appears on every log line and in the response. Levels: ERROR / WARN / INFO / DEBUG / TRACE. See [09-logging-and-audit.md](09-logging-and-audit.md). |
+| **Audit** | `AuditLogger` (injected) writes one key=value line per business action, success or failure, to `logs/audit-0.log`. |
 | **Notifications** | Observer: services publish `BookingEvent`s; listeners react. A failing listener is logged and never breaks the booking. |
 
 ## 2.5 How this maps to Spring Boot

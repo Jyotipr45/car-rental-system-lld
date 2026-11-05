@@ -1,11 +1,14 @@
 package com.jyoti.carrental.scheduler;
 
+import com.jyoti.carrental.logging.TraceContext;
 import com.jyoti.carrental.service.BookingService;
 
 import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Background job that expires unpaid bookings so they stop blocking vehicles.
@@ -14,6 +17,8 @@ import java.util.concurrent.TimeUnit;
  * @author Jyoti Prakash Parida
  */
 public class PendingBookingCleanupJob {
+
+    private static final Logger LOG = Logger.getLogger(PendingBookingCleanupJob.class.getName());
 
     private final BookingService bookingService;
     private final Duration paymentWindow;
@@ -27,7 +32,23 @@ public class PendingBookingCleanupJob {
 
     /** Runs one sweep now. Returns how many bookings were expired. */
     public int runOnce() {
-        return bookingService.expireUnpaidBookings(paymentWindow);
+        boolean ownsTrace = !TraceContext.isActive();
+        if (ownsTrace) {
+            TraceContext.start("job-"); // background work gets its own trace id too
+        }
+        try {
+            int expired = bookingService.expireUnpaidBookings(paymentWindow);
+            if (expired > 0) {
+                LOG.info(() -> "Cleanup run expired " + expired + " unpaid booking(s)");
+            } else {
+                LOG.fine("Cleanup run: nothing to expire");
+            }
+            return expired;
+        } finally {
+            if (ownsTrace) {
+                TraceContext.clear();
+            }
+        }
     }
 
     /** Starts running {@link #runOnce()} every {@code interval} on a daemon thread. */
@@ -41,12 +62,15 @@ public class PendingBookingCleanupJob {
             return t;
         });
         executor.scheduleAtFixedRate(this::safeRun, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
+        LOG.info(() -> "Cleanup job started: every " + interval.toSeconds() + " s, payment window "
+                + paymentWindow.toMinutes() + " min");
     }
 
     public synchronized void stop() {
         if (executor != null) {
             executor.shutdownNow();
             executor = null;
+            LOG.info("Cleanup job stopped");
         }
     }
 
@@ -55,7 +79,7 @@ public class PendingBookingCleanupJob {
         try {
             runOnce();
         } catch (RuntimeException e) {
-            System.err.println("Cleanup job failed: " + e.getMessage());
+            LOG.log(Level.SEVERE, "Cleanup job run failed", e);
         }
     }
 }

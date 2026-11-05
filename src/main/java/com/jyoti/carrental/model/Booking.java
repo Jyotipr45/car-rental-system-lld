@@ -6,6 +6,7 @@ import com.jyoti.carrental.model.enums.BookingStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.logging.Logger;
 
 /**
  * The central "transaction" entity. It links <b>who</b> (user), <b>what</b> (vehicle),
@@ -24,6 +25,8 @@ import java.time.LocalDateTime;
  * @author Jyoti Prakash Parida
  */
 public class Booking extends BaseEntity {
+
+    private static final Logger LOG = Logger.getLogger(Booking.class.getName());
 
     private final Long userId;
     private final Long vehicleId;
@@ -87,7 +90,9 @@ public class Booking extends BaseEntity {
             throw new InvalidBookingStateException(
                     "Booking " + getId() + " cannot move from " + status + " to " + next);
         }
+        BookingStatus previous = this.status;
         this.status = next;
+        LOG.fine(() -> "Booking#" + getId() + " state " + previous + " -> " + next);
     }
 
     // ---------------------------------------------------------------- queries

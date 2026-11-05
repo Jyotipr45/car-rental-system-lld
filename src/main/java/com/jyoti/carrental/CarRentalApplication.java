@@ -16,6 +16,7 @@ import com.jyoti.carrental.dto.request.VehicleSearchRequest;
 import com.jyoti.carrental.dto.response.ApiResponse;
 import com.jyoti.carrental.dto.response.BookingResponse;
 import com.jyoti.carrental.dto.response.UserResponse;
+import com.jyoti.carrental.logging.LoggingConfig;
 import com.jyoti.carrental.model.enums.CarType;
 import com.jyoti.carrental.model.enums.FuelType;
 import com.jyoti.carrental.model.enums.PaymentMethod;
@@ -44,6 +45,11 @@ import java.util.concurrent.TimeUnit;
  * @author Jyoti Prakash Parida
  */
 public final class CarRentalApplication {
+
+    // Logging is configured before anything else runs, so even startup is logged.
+    static {
+        LoggingConfig.initFromEnvironment();
+    }
 
     private static final CarRentalSystem SYSTEM = CarRentalSystem.getInstance(); // the singleton
     private static final AuthController AUTH = SYSTEM.authController();
@@ -160,6 +166,9 @@ public final class CarRentalApplication {
         show(BOOKINGS.history(riyaId));
 
         banner("Demo finished");
+        System.out.println("  Full application log : logs/car-rental-0.log");
+        System.out.println("  Audit trail          : logs/audit-0.log");
+        System.out.println("  Tip: run with 'run.bat debug' to stream DEBUG/TRACE logs to the console.");
     }
 
     /** Fires many booking requests at once and proves only one wins. */

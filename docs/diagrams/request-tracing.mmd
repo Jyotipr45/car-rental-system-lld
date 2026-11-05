@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant C as Client
+    participant H as GlobalExceptionHandler
+    participant T as TraceContext (ThreadLocal)
+    participant S as Services / Repos / Locks
+    C->>H: create booking
+    H->>T: start() → "3f9a1c2b"
+    H->>H: DEBUG --> POST /api/v1/bookings
+    H->>S: business logic
+    S->>S: every log line reads TraceContext.current()
+    S-->>H: result / exception
+    H->>H: INFO/WARN <-- POST /api/v1/bookings 201 (1 ms)
+    H->>T: clear()  (thread is reused)
+    H-->>C: ApiResponse{..., traceId:"3f9a1c2b"}

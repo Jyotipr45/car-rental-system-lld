@@ -29,11 +29,11 @@ public class AuthController {
     /** POST /api/v1/auth/register */
     public ApiResponse<UserResponse> register(Supplier<RegisterUserRequest> request) {
         // The request is built inside the handler so validation errors become 400 responses.
-        return handler.handle(201, () -> UserResponse.from(userService.register(request.get())));
+        return handler.handle("POST /api/v1/auth/register", 201, () -> UserResponse.from(userService.register(request.get())));
     }
 
     /** POST /api/v1/auth/login */
     public ApiResponse<UserResponse> login(Supplier<LoginRequest> request) {
-        return handler.handle(200, () -> UserResponse.from(userService.login(request.get())));
+        return handler.handle("POST /api/v1/auth/login", 200, () -> UserResponse.from(userService.login(request.get())));
     }
 }

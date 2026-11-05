@@ -2,7 +2,7 @@
 
 A small but complete **car rental backend** built to learn how a real system is **structured and designed before it is coded**: requirements, entities, relationships, layers, interfaces vs. abstract classes, enums, design patterns, and the hard part (no double booking under concurrency).
 
-Plain **Java 17**, **zero dependencies**, **29 passing tests**, and an end-to-end demo that walks through every requirement.
+Plain **Java 17**, **zero dependencies**, **36 passing tests**, structured **logging with request tracing and an audit trail**, and an end-to-end demo that walks through every requirement.
 
 > Author: **Jyoti Prakash Parida**
 
@@ -16,6 +16,7 @@ Plain **Java 17**, **zero dependencies**, **29 passing tests**, and an end-to-en
 | Search available cars and bikes by branch, dates, type, seats | Add cars and bikes | Prevents double booking, even with 30+ simultaneous requests |
 | Book, pay (Card / UPI / Cash), cancel with refund | Mark vehicles under maintenance | Charges late fees on late return |
 | View booking history and payments | Hand over (pickup) and receive (return) vehicles | Expires unpaid bookings after 15 minutes; notifies on every booking event |
+| | | Logs every request with a trace id and writes an audit trail of every business action |
 
 ## 🏗️ Architecture at a glance
 
@@ -49,6 +50,7 @@ Layered architecture: **Controller → Service → Repository**, with every depe
 | 6 | [Flows & State Machine](docs/06-flows-and-state-machine.md) | Booking lifecycle, sequence diagrams, concurrency and locking options |
 | 7 | [API Design](docs/07-api-design.md) | REST endpoints, sample requests, error codes |
 | 8 | [Decisions & Roadmap](docs/08-design-decisions-and-roadmap.md) | Step-by-step design procedure, trade-offs, limitations, roadmap |
+| 9 | [Logging, Tracing & Audit](docs/09-logging-and-audit.md) | Log levels, trace ids, audit trail format, what never to log, Spring equivalent |
 
 ## 🚀 Getting started
 
@@ -63,10 +65,15 @@ run.bat
 # macOS / Linux
 ./run.sh
 
+# with DEBUG logs on the console (or "trace" for everything)
+run.bat debug
+
 # or with Maven
 mvn package
 java -jar target/car-rental-system-1.0.0.jar
 ```
+
+Logs are written to `logs/car-rental-0.log` (everything) and `logs/audit-0.log` (audit trail). See [docs/09](docs/09-logging-and-audit.md).
 
 ### Run the tests
 
@@ -78,7 +85,7 @@ test.bat
 ./test.sh
 ```
 
-Expected: `CarRentalSystemTest: 29 passed, 0 failed`
+Expected: `CarRentalSystemTest: 29 passed, 0 failed` and `LoggingAndAuditTest: 7 passed, 0 failed`
 
 ### Demo output (excerpt)
 
@@ -100,7 +107,7 @@ Expected: `CarRentalSystemTest: 29 passed, 0 failed`
 
 ```
 car-rental-system-lld/
-├── docs/                                  design documentation (8 files)
+├── docs/                                  design documentation (9 files + diagrams/)
 ├── src/main/java/com/jyoti/carrental/
 │   ├── CarRentalApplication.java          demo entry point
 │   ├── config/CarRentalSystem.java        singleton composition root
@@ -114,8 +121,9 @@ car-rental-system-lld/
 │   ├── repository/                        generic + concrete in-memory repositories
 │   ├── model/ + model/enums/              entities and enums
 │   ├── exception/                         typed business exceptions
+│   ├── logging/                           trace ids, log format, audit trail, data masking
 │   └── util/                              password hashing, validation, vehicle locks
-├── src/test/java/com/jyoti/carrental/     29 behaviour tests + mini test runner
+├── src/test/java/com/jyoti/carrental/     36 tests (behaviour + logging/audit) + mini test runner
 ├── pom.xml
 ├── run.bat / run.sh / test.bat / test.sh
 └── LICENSE
@@ -128,7 +136,8 @@ car-rental-system-lld/
 3. **Two ranges overlap when `start1 <= end2 AND end1 >= start2`.** The same query solves hotel rooms, meeting rooms and appointments.
 4. **Re-check availability at booking time, under a lock.** Search results go stale the moment they are shown.
 5. **Money is `BigDecimal`, time is an injected `Clock`.**
-6. **Program to interfaces, wire in one place.** Swapping pricing rules or payment gateways is a one-line change.
+6. **Every request has a trace id; every business action has an audit line, including failed and denied ones.**
+7. **Program to interfaces, wire in one place.** Swapping pricing rules or payment gateways is a one-line change.
 
 ## 🛣️ Roadmap
 

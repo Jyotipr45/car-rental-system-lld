@@ -47,6 +47,7 @@ Short version: **interface = "can do"**, **abstract class = "is a" + shared code
 | Payments | `CardPaymentProcessor`, `UpiPaymentProcessor`, `CashPaymentProcessor`, `PaymentProcessorFactory` |
 | Controllers | `AuthController`, `BranchController`, `VehicleController`, `BookingController`, `GlobalExceptionHandler` |
 | Infrastructure | `VehicleLockManager`, `PendingBookingCleanupJob`, `ConsoleNotificationListener` |
+| Logging | `AuditLogger` (injected), `LogFormatter` (extends JUL `Formatter`), `LoggingConfig`, `TraceContext`, `LogSanitizer` (final utilities) |
 | Utilities (final, private constructor) | `PasswordHasher`, `Validate`, `BookingRules` |
 | Exceptions | `InvalidRequestException` (400), `AuthenticationException` (401), `PaymentFailedException` (402), `AccessDeniedException` (403), `ResourceNotFoundException` (404), `VehicleNotAvailableException`, `DuplicateResourceException`, `InvalidBookingStateException` (409) |
 
@@ -65,6 +66,8 @@ Short version: **interface = "can do"**, **abstract class = "is a" + shared code
 | `PaymentMethod` | CARD, UPI, CASH | key for the Factory |
 | `PaymentPurpose` | RENTAL, LATE_FEE | |
 | `BookingEventType` | CREATED, CONFIRMED, PICKED_UP, RETURNED, CANCELLED, EXPIRED | |
+| `AuditAction` | USER_REGISTERED, LOGIN, ACCESS_DENIED, BOOKING_CREATED, PAYMENT, … (15 values) | |
+| `AuditOutcome` | SUCCESS, FAILURE, DENIED | |
 
 **Not enums:** branches, cities and brands are data that admins add at runtime, so they are entities/fields, not enums.
 

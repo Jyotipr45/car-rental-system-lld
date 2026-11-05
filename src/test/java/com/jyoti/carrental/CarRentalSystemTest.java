@@ -91,6 +91,11 @@ public class CarRentalSystemTest {
         suvId = addCar("MH12AA0002", CarType.SUV, "3000");
     }
 
+    static {
+        // Behaviour tests don't assert on logs: record nothing, print nothing.
+        com.jyoti.carrental.logging.LoggingConfig.init(java.util.logging.Level.OFF, java.util.logging.Level.OFF, null);
+    }
+
     public static void main(String[] args) throws Exception {
         MiniTest.run(CarRentalSystemTest.class);
     }

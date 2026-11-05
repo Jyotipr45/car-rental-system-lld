@@ -2,12 +2,16 @@ package com.jyoti.carrental.event;
 
 import com.jyoti.carrental.model.Booking;
 
+import java.util.logging.Logger;
+
 /**
  * Stand-in for an email/SMS sender: prints a customer-facing message to the console.
  *
  * @author Jyoti Prakash Parida
  */
 public class ConsoleNotificationListener implements BookingEventListener {
+
+    private static final Logger LOG = Logger.getLogger(ConsoleNotificationListener.class.getName());
 
     private final boolean enabled;
 
@@ -30,6 +34,7 @@ public class ConsoleNotificationListener implements BookingEventListener {
             case CANCELLED -> "Booking #" + b.getId() + " cancelled: " + b.getCancellationReason();
             case EXPIRED -> "Booking #" + b.getId() + " expired because payment was not received.";
         };
+        LOG.fine(() -> "Notification " + event.type() + " sent to User#" + b.getUserId());
         System.out.println("    [notify user " + b.getUserId() + "] " + text);
     }
 }

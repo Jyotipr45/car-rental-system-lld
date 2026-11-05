@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
+import java.util.logging.Logger;
 
 /**
  * Thread-safe in-memory implementation shared by all repositories.
@@ -28,6 +29,8 @@ import java.util.function.Predicate;
  */
 public abstract class InMemoryRepository<T extends BaseEntity> implements CrudRepository<T> {
 
+    private static final Logger LOG = Logger.getLogger(InMemoryRepository.class.getName());
+
     private final Map<Long, T> store = new ConcurrentHashMap<>();
     private final AtomicLong sequence = new AtomicLong();
     private final Clock clock;
@@ -39,12 +42,14 @@ public abstract class InMemoryRepository<T extends BaseEntity> implements CrudRe
     @Override
     public T save(T entity) {
         LocalDateTime now = LocalDateTime.now(clock);
-        if (entity.getId() == null) {
+        boolean insert = entity.getId() == null;
+        if (insert) {
             entity.setId(sequence.incrementAndGet());
             entity.setCreatedAt(now);
         }
         entity.setUpdatedAt(now);
         store.put(entity.getId(), entity);
+        LOG.finest(() -> (insert ? "INSERT " : "UPDATE ") + entity.getClass().getSimpleName() + "#" + entity.getId());
         return entity;
     }
 

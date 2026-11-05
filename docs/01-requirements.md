@@ -62,6 +62,7 @@ A customer picks a vehicle at a branch for a date range, pays, picks it up, uses
 | NFR-08 | **Thread safety** | Shared state is safe under concurrent access. | `ConcurrentHashMap`, `AtomicLong`, `CopyOnWriteArrayList`, locks. |
 | NFR-09 | **Availability of inventory** | Abandoned unpaid bookings do not hold vehicles forever. | 15-minute payment window + cleanup job. |
 | NFR-10 | **Portability** | Builds and runs with only a JDK 17+, no external libraries. | Zero dependencies, `run.bat` / `run.sh`. |
+| NFR-11 | **Observability & audit** | Every request is traceable end to end; every business action (including failed and denied attempts) is audited; no secrets in logs. | Trace id per request (`TraceContext`), levelled logs, `AuditLogger` → `logs/audit-0.log`, `LogSanitizer`. See [09](09-logging-and-audit.md). |
 
 ## 1.5 Out of scope (v1)
 

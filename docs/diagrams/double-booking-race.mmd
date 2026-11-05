@@ -1,0 +1,9 @@
+sequenceDiagram
+    participant T1 as Thread A (Riya)
+    participant T2 as Thread B (Arjun)
+    participant DB as Bookings
+    T1->>DB: any overlap for Swift 10–12? → no
+    T2->>DB: any overlap for Swift 10–12? → no
+    T1->>DB: save booking
+    T2->>DB: save booking
+    Note over DB: Swift booked twice ❌

@@ -35,22 +35,9 @@ Without the pattern, `BookingServiceImpl` would grow `if (weekend) ... else if (
 
 ## 4.3 Factory + Strategy + Template Method together
 
-```mermaid
-sequenceDiagram
-    participant PS as PaymentServiceImpl
-    participant F as PaymentProcessorFactory
-    participant P as UpiPaymentProcessor
-    participant A as AbstractPaymentProcessor (inherited)
-    PS->>F: getProcessor(UPI)
-    F-->>PS: UpiPaymentProcessor
-    PS->>P: process(payment)
-    Note over P,A: final process() comes from the abstract parent
-    A->>A: validate amount > 0
-    A->>P: doProcess(payment)  (the only step UPI writes)
-    P-->>A: PaymentResult
-    A->>A: log
-    A-->>PS: PaymentResult
-```
+![Payment Sequence](diagrams/payment-sequence.png)
+
+<sub>Diagram source: [payment-sequence.mmd](diagrams/payment-sequence.mmd)</sub>
 
 Adding **Net Banking** = one class `NetBankingPaymentProcessor extends AbstractPaymentProcessor`, one enum value, and one entry in the list passed to the factory. Nothing else changes.
 

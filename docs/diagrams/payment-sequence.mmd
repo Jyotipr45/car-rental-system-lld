@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant PS as PaymentServiceImpl
+    participant F as PaymentProcessorFactory
+    participant P as UpiPaymentProcessor
+    participant A as AbstractPaymentProcessor (inherited)
+    PS->>F: getProcessor(UPI)
+    F-->>PS: UpiPaymentProcessor
+    PS->>P: process(payment)
+    Note over P,A: final process() comes from the abstract parent
+    A->>A: validate amount > 0
+    A->>P: doProcess(payment)  (the only step UPI writes)
+    P-->>A: PaymentResult
+    A->>A: log
+    A-->>PS: PaymentResult

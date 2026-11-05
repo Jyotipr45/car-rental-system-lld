@@ -1,0 +1,17 @@
+sequenceDiagram
+    actor A as Admin
+    participant BS as BookingService
+    participant LF as LateFeePolicy
+    participant PS as PaymentService
+
+    A->>BS: markPickup(adminId, bookingId)
+    BS->>BS: requireAdmin, status == CONFIRMED, today in [start, end], vehicle rentable
+    BS->>BS: booking.startTrip(now)  → ONGOING
+
+    A->>BS: markReturn(adminId, bookingId, returnTime, method)
+    BS->>BS: status == ONGOING, returnTime >= pickupTime
+    BS->>LF: calculateLateFee(vehicle, endDate, returnTime)
+    alt late fee > 0
+        BS->>PS: charge(bookingId, fee, method, LATE_FEE)
+    end
+    BS->>BS: booking.completeTrip(returnTime, fee) → COMPLETED

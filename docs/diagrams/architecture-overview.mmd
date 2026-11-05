@@ -1,0 +1,8 @@
+flowchart LR
+    C[Client / Demo] --> CT[Controllers<br/>+ GlobalExceptionHandler]
+    CT --> S[Services<br/>Booking · Vehicle · Payment · User · Branch]
+    S --> ST[Strategies<br/>Pricing · LateFee]
+    S --> P[PaymentProcessorFactory<br/>Card · UPI · Cash]
+    S --> E[Event listeners<br/>Observer]
+    S --> R[Repositories]
+    R --> M[(In-memory store)]

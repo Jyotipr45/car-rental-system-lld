@@ -1,0 +1,100 @@
+classDiagram
+    direction LR
+    class BaseEntity {
+        <<abstract>>
+        -Long id
+        -LocalDateTime createdAt
+        -LocalDateTime updatedAt
+        +equals(Object) boolean
+        +hashCode() int
+    }
+    class User {
+        -String name
+        -String email
+        -String phone
+        -String passwordHash
+        -String drivingLicenseNo
+        -UserRole role
+        +isAdmin() boolean
+    }
+    class Branch {
+        -String name
+        -String address
+        -String city
+    }
+    class Vehicle {
+        <<abstract>>
+        -String registrationNo
+        -String brand
+        -String model
+        -FuelType fuelType
+        -BigDecimal pricePerDay
+        -VehicleStatus status
+        -Long branchId
+        +getCategory()* VehicleCategory
+        +getSeatingCapacity()* int
+        +isRentable() boolean
+    }
+    class Car {
+        -CarType carType
+        -TransmissionType transmission
+        -int seats
+    }
+    class Bike {
+        -int engineCc
+    }
+    class Booking {
+        -Long userId
+        -Long vehicleId
+        -Long branchId
+        -LocalDate startDate
+        -LocalDate endDate
+        -LocalDateTime actualPickupTime
+        -LocalDateTime actualReturnTime
+        -BigDecimal baseAmount
+        -BigDecimal lateFee
+        -BigDecimal totalAmount
+        -BookingStatus status
+        -String cancellationReason
+        +confirm()
+        +startTrip(LocalDateTime)
+        +completeTrip(LocalDateTime, BigDecimal)
+        +cancel(String)
+        +overlaps(LocalDate, LocalDate) boolean
+        +blocksInventory() boolean
+    }
+    class Payment {
+        -Long bookingId
+        -BigDecimal amount
+        -PaymentMethod method
+        -PaymentPurpose purpose
+        -PaymentStatus status
+        -String transactionRef
+        -LocalDateTime paidAt
+        +markSuccess(String, LocalDateTime)
+        +markFailed(String)
+        +markRefunded()
+    }
+    class BookingStatus {
+        <<enumeration>>
+        PENDING_PAYMENT
+        CONFIRMED
+        ONGOING
+        COMPLETED
+        CANCELLED
+        +canTransitionTo(BookingStatus) boolean
+        +blocksInventory() boolean
+    }
+
+    BaseEntity <|-- User
+    BaseEntity <|-- Branch
+    BaseEntity <|-- Vehicle
+    BaseEntity <|-- Booking
+    BaseEntity <|-- Payment
+    Vehicle <|-- Car
+    Vehicle <|-- Bike
+    Branch "1" --> "*" Vehicle : has
+    User "1" --> "*" Booking : makes
+    Vehicle "1" --> "*" Booking : reserved by
+    Booking "1" --> "*" Payment : paid by
+    Booking --> BookingStatus

@@ -2,18 +2,9 @@
 
 ## 6.1 Booking state machine
 
-```mermaid
-stateDiagram-v2
-    [*] --> PENDING_PAYMENT : createBooking
-    PENDING_PAYMENT --> CONFIRMED : payForBooking (success)
-    PENDING_PAYMENT --> PENDING_PAYMENT : payment declined (retry)
-    PENDING_PAYMENT --> CANCELLED : customer cancels / 15-min expiry
-    CONFIRMED --> ONGOING : markPickup (on/after start date)
-    CONFIRMED --> CANCELLED : customer cancels (+ refund)
-    ONGOING --> COMPLETED : markReturn (+ late fee if any)
-    COMPLETED --> [*]
-    CANCELLED --> [*]
-```
+![Booking State Machine](diagrams/booking-state-machine.png)
+
+<sub>Diagram source: [booking-state-machine.mmd](diagrams/booking-state-machine.mmd)</sub>
 
 | From \ To | PENDING_PAYMENT | CONFIRMED | ONGOING | COMPLETED | CANCELLED |
 |---|---|---|---|---|---|
@@ -27,92 +18,23 @@ Blocking statuses (vehicle is held for the dates): **PENDING_PAYMENT, CONFIRMED,
 
 ## 6.2 Search → book → pay
 
-```mermaid
-sequenceDiagram
-    actor C as Customer
-    participant VC as VehicleController
-    participant VS as VehicleService
-    participant BC as BookingController
-    participant BS as BookingService
-    participant LM as VehicleLockManager
-    participant BR as BookingRepository
-    participant PR as PricingStrategy
-    participant PS as PaymentService
-    participant F as PaymentProcessorFactory
+![Book And Pay Sequence](diagrams/book-and-pay-sequence.png)
 
-    C->>VC: search(branch, start, end, filters)
-    VC->>VS: searchAvailable(request)
-    VS->>BR: existsActiveOverlap(vehicle, start, end) for each vehicle
-    VS-->>C: available vehicles (cheapest first)
-
-    C->>BC: create(userId, vehicleId, start, end)
-    BC->>BS: createBooking(request)
-    BS->>BS: validate user role and dates
-    BS->>LM: withLock(vehicleId)
-    activate LM
-    LM->>BR: existsActiveOverlap(...)  (re-check, search may be stale)
-    alt overlap
-        LM-->>C: 409 VehicleNotAvailable
-    else free
-        LM->>PR: calculatePrice(vehicle, start, end)
-        LM->>BR: save(Booking PENDING_PAYMENT)
-    end
-    deactivate LM
-    BS-->>C: 201 booking (PENDING_PAYMENT)
-
-    C->>BC: pay(bookingId, UPI)
-    BC->>BS: payForBooking(request)
-    BS->>LM: withLock(vehicleId)
-    BS->>PS: charge(bookingId, total, UPI, RENTAL)
-    PS->>F: getProcessor(UPI)
-    F-->>PS: UpiPaymentProcessor
-    PS-->>BS: Payment (SUCCESS / FAILED)
-    alt SUCCESS
-        BS->>BS: booking.confirm()
-        BS-->>C: 201 payment, booking CONFIRMED
-    else FAILED
-        BS-->>C: 402 PaymentFailed (booking stays PENDING_PAYMENT)
-    end
-```
+<sub>Diagram source: [book-and-pay-sequence.mmd](diagrams/book-and-pay-sequence.mmd)</sub>
 
 ## 6.3 Pickup and return
 
-```mermaid
-sequenceDiagram
-    actor A as Admin
-    participant BS as BookingService
-    participant LF as LateFeePolicy
-    participant PS as PaymentService
+![Pickup Return Sequence](diagrams/pickup-return-sequence.png)
 
-    A->>BS: markPickup(adminId, bookingId)
-    BS->>BS: requireAdmin, status == CONFIRMED, today in [start, end], vehicle rentable
-    BS->>BS: booking.startTrip(now)  → ONGOING
-
-    A->>BS: markReturn(adminId, bookingId, returnTime, method)
-    BS->>BS: status == ONGOING, returnTime >= pickupTime
-    BS->>LF: calculateLateFee(vehicle, endDate, returnTime)
-    alt late fee > 0
-        BS->>PS: charge(bookingId, fee, method, LATE_FEE)
-    end
-    BS->>BS: booking.completeTrip(returnTime, fee) → COMPLETED
-```
+<sub>Diagram source: [pickup-return-sequence.mmd](diagrams/pickup-return-sequence.mmd)</sub>
 
 **Late fee example:** Creta at ₹3,200/day, booked 5–7 Nov, returned 9 Nov 11:00 → 2 late days × 3,200 × 1.5 = **₹9,600**; total = 9,600 + 9,600 = ₹19,200.
 
 ## 6.4 Cancel and refund
 
-```mermaid
-flowchart TD
-    A[cancelBooking bookingId, userId] --> B{Owner or admin?}
-    B -- no --> X[403 AccessDenied]
-    B -- yes --> C[lock vehicle]
-    C --> D{Status?}
-    D -- PENDING_PAYMENT --> E[cancel]
-    D -- CONFIRMED --> F[cancel + refund RENTAL payments]
-    D -- ONGOING / COMPLETED / CANCELLED --> Y[409 InvalidBookingState]
-    E --> G[publish CANCELLED]
-    F --> G
-```
+![Cancel Refund Flow](diagrams/cancel-refund-flow.png)
+
+<sub>Diagram source: [cancel-refund-flow.mmd](diagrams/cancel-refund-flow.mmd)</sub>
 
 ## 6.5 Unpaid booking expiry
 
@@ -122,17 +44,9 @@ Every minute (`PendingBookingCleanupJob`), bookings that are still `PENDING_PAYM
 
 **The race without a lock:**
 
-```mermaid
-sequenceDiagram
-    participant T1 as Thread A (Riya)
-    participant T2 as Thread B (Arjun)
-    participant DB as Bookings
-    T1->>DB: any overlap for Swift 10–12? → no
-    T2->>DB: any overlap for Swift 10–12? → no
-    T1->>DB: save booking
-    T2->>DB: save booking
-    Note over DB: Swift booked twice ❌
-```
+![Double Booking Race](diagrams/double-booking-race.png)
+
+<sub>Diagram source: [double-booking-race.mmd](diagrams/double-booking-race.mmd)</sub>
 
 **With `VehicleLockManager`:** the check and the save for one vehicle run as one atomic step. Thread B waits for A, then sees A's booking and gets 409. Bookings for *different* vehicles still run in parallel because each vehicle has its own lock.
 

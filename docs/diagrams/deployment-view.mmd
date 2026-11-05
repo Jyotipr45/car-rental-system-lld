@@ -1,0 +1,10 @@
+flowchart LR
+    U[Web / Mobile client] -->|HTTPS| LB[Load balancer]
+    LB --> A1[car-rental-api #1]
+    LB --> A2[car-rental-api #2]
+    A1 --> DB[(PostgreSQL)]
+    A2 --> DB
+    A1 --> PG[Payment gateway]
+    A2 --> PG
+    A1 -. booking events .-> K[[Kafka / queue]]
+    K --> N[Notification service]

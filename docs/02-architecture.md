@@ -4,50 +4,9 @@
 
 Each layer has one job and may only call the layer directly below it. Dependencies point **downwards only**.
 
-```mermaid
-flowchart TB
-    Client["Client<br/>(CarRentalApplication demo / tests / future REST client)"]
+![Layered Architecture](diagrams/layered-architecture.png)
 
-    subgraph Presentation["Presentation layer: controller"]
-        AC[AuthController]
-        BRC[BranchController]
-        VC[VehicleController]
-        BC[BookingController]
-        GEH[GlobalExceptionHandler]
-    end
-
-    subgraph Business["Business layer: service + strategy + payment + event"]
-        US[UserService]
-        BS[BranchService]
-        VS[VehicleService]
-        BKS[BookingService]
-        PS[PaymentService]
-        PR[PricingStrategy]
-        LF[LateFeePolicy]
-        PF[PaymentProcessorFactory]
-        EV[BookingEventListener]
-        LM[VehicleLockManager]
-    end
-
-    subgraph Data["Data layer: repository"]
-        UR[UserRepository]
-        BRR[BranchRepository]
-        VR[VehicleRepository]
-        BKR[BookingRepository]
-        PYR[PaymentRepository]
-    end
-
-    Store[("In-memory store<br/>(ConcurrentHashMap)<br/>→ MySQL/PostgreSQL later")]
-    GW["Payment gateways<br/>(Card / UPI / Cash mocks)"]
-    Job["PendingBookingCleanupJob<br/>(scheduler)"]
-
-    Client --> Presentation
-    Presentation --> Business
-    Business --> Data
-    Data --> Store
-    PF --> GW
-    Job --> BKS
-```
+<sub>Diagram source: [layered-architecture.mmd](diagrams/layered-architecture.mmd)</sub>
 
 | Layer | Package | Responsibility | Must NOT |
 |---|---|---|---|
@@ -87,20 +46,9 @@ com.jyoti.carrental
 
 ## 2.3 Dependency graph between services
 
-```mermaid
-flowchart LR
-    BookingService --> UserService
-    BookingService --> VehicleService
-    BookingService --> PaymentService
-    BookingService --> PricingStrategy
-    BookingService --> LateFeePolicy
-    BookingService --> VehicleLockManager
-    VehicleService --> BranchService
-    VehicleService --> UserService
-    BranchService --> UserService
-    PaymentService --> PaymentProcessorFactory
-    PaymentProcessorFactory --> PaymentProcessor
-```
+![Service Dependencies](diagrams/service-dependencies.png)
+
+<sub>Diagram source: [service-dependencies.mmd](diagrams/service-dependencies.mmd)</sub>
 
 There are **no cycles**. `PaymentService` does not know booking states. `BookingService` orchestrates: it charges through `PaymentService` and then changes the booking itself. If `PaymentService` confirmed bookings while `BookingService` asked it for refunds, the two would depend on each other, which is a design smell (and in Spring, a startup error with constructor injection).
 
@@ -138,17 +86,8 @@ The plain-Java design is a one-to-one blueprint for a Spring Boot service:
 
 ## 2.6 Deployment view (target, after the Spring port)
 
-```mermaid
-flowchart LR
-    U[Web / Mobile client] -->|HTTPS| LB[Load balancer]
-    LB --> A1[car-rental-api #1]
-    LB --> A2[car-rental-api #2]
-    A1 --> DB[(PostgreSQL)]
-    A2 --> DB
-    A1 --> PG[Payment gateway]
-    A2 --> PG
-    A1 -. booking events .-> K[[Kafka / queue]]
-    K --> N[Notification service]
-```
+![Deployment View](diagrams/deployment-view.png)
+
+<sub>Diagram source: [deployment-view.mmd](diagrams/deployment-view.mmd)</sub>
 
 With more than one instance, the in-JVM lock is no longer enough. Locking must move to the database (`SELECT ... FOR UPDATE` or an exclusion constraint on `(vehicle_id, daterange)` in PostgreSQL). See [08-design-decisions-and-roadmap.md](08-design-decisions-and-roadmap.md).

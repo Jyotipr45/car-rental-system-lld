@@ -1,0 +1,10 @@
+stateDiagram-v2
+    [*] --> PENDING_PAYMENT : createBooking
+    PENDING_PAYMENT --> CONFIRMED : payForBooking (success)
+    PENDING_PAYMENT --> PENDING_PAYMENT : payment declined (retry)
+    PENDING_PAYMENT --> CANCELLED : customer cancels / 15-min expiry
+    CONFIRMED --> ONGOING : markPickup (on/after start date)
+    CONFIRMED --> CANCELLED : customer cancels (+ refund)
+    ONGOING --> COMPLETED : markReturn (+ late fee if any)
+    COMPLETED --> [*]
+    CANCELLED --> [*]

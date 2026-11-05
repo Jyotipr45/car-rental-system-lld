@@ -1,0 +1,37 @@
+flowchart TB
+    Client["Client<br/>(demo app / tests / future REST client)"]
+
+    subgraph P["① Presentation layer — controller"]
+        direction LR
+        AC[AuthController] ~~~ BRC[BranchController] ~~~ VC[VehicleController] ~~~ BC[BookingController] ~~~ GEH[GlobalExceptionHandler]
+    end
+
+    subgraph S["② Business layer — service"]
+        direction LR
+        US[UserService] ~~~ BS[BranchService] ~~~ VS[VehicleService] ~~~ BKS[BookingService] ~~~ PS[PaymentService]
+    end
+
+    subgraph X["② Business helpers — strategy · payment · event · util"]
+        direction LR
+        PR[PricingStrategy] ~~~ LF[LateFeePolicy] ~~~ PF[PaymentProcessorFactory] ~~~ EV[BookingEventListener] ~~~ LM[VehicleLockManager]
+    end
+
+    subgraph D["③ Data layer — repository"]
+        direction LR
+        UR[UserRepository] ~~~ BRR[BranchRepository] ~~~ VR[VehicleRepository] ~~~ BKR[BookingRepository] ~~~ PYR[PaymentRepository]
+    end
+
+    Store[("In-memory store (ConcurrentHashMap)<br/>→ MySQL / PostgreSQL later")]
+    GW["Payment gateways<br/>(Card / UPI / Cash mocks)"]
+    Job["PendingBookingCleanupJob<br/>(scheduler)"]
+
+    Client --> P
+    P --> S
+    S --> X
+    S --> D
+    D --> Store
+    X --> GW
+    Job --> S
+
+    classDef layer fill:#f8fafc,stroke:#64748b,stroke-width:1px
+    class P,S,X,D layer

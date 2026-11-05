@@ -1,0 +1,12 @@
+flowchart LR
+    BookingService --> UserService
+    BookingService --> VehicleService
+    BookingService --> PaymentService
+    BookingService --> PricingStrategy
+    BookingService --> LateFeePolicy
+    BookingService --> VehicleLockManager
+    VehicleService --> BranchService
+    VehicleService --> UserService
+    BranchService --> UserService
+    PaymentService --> PaymentProcessorFactory
+    PaymentProcessorFactory --> PaymentProcessor

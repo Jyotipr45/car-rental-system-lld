@@ -2,74 +2,9 @@
 
 ## 5.1 Entity-relationship diagram
 
-```mermaid
-erDiagram
-    USER ||--o{ BOOKING : makes
-    BRANCH ||--o{ VEHICLE : owns
-    VEHICLE ||--o{ BOOKING : "is reserved by"
-    BRANCH ||--o{ BOOKING : "pickup at"
-    BOOKING ||--o{ PAYMENT : "is paid by"
+![Er Diagram](diagrams/er-diagram.png)
 
-    USER {
-        bigint id PK
-        varchar name
-        varchar email UK
-        varchar phone
-        varchar password_hash
-        varchar driving_license_no
-        varchar role "CUSTOMER | ADMIN"
-        timestamp created_at
-        timestamp updated_at
-    }
-    BRANCH {
-        bigint id PK
-        varchar name
-        varchar address
-        varchar city
-        timestamp created_at
-    }
-    VEHICLE {
-        bigint id PK
-        varchar category "CAR | BIKE (discriminator)"
-        varchar registration_no UK
-        varchar brand
-        varchar model
-        varchar fuel_type
-        decimal price_per_day
-        varchar status "AVAILABLE | UNDER_MAINTENANCE | INACTIVE"
-        bigint branch_id FK
-        varchar car_type "car only"
-        varchar transmission "car only"
-        int seats "car only"
-        int engine_cc "bike only"
-    }
-    BOOKING {
-        bigint id PK
-        bigint user_id FK
-        bigint vehicle_id FK
-        bigint branch_id FK
-        date start_date
-        date end_date
-        timestamp actual_pickup_time
-        timestamp actual_return_time
-        decimal base_amount
-        decimal late_fee
-        decimal total_amount
-        varchar status
-        varchar cancellation_reason
-        timestamp created_at
-    }
-    PAYMENT {
-        bigint id PK
-        bigint booking_id FK
-        decimal amount
-        varchar method "CARD | UPI | CASH"
-        varchar purpose "RENTAL | LATE_FEE"
-        varchar status "PENDING | SUCCESS | FAILED | REFUNDED"
-        varchar transaction_ref
-        timestamp paid_at
-    }
-```
+<sub>Diagram source: [er-diagram.mmd](diagrams/er-diagram.mmd)</sub>
 
 ## 5.2 Relationships and how to reason about them
 

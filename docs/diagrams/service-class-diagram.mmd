@@ -1,0 +1,77 @@
+classDiagram
+    direction TB
+    class BookingService {
+        <<interface>>
+        +createBooking(CreateBookingRequest) Booking
+        +payForBooking(PaymentRequest) Payment
+        +cancelBooking(Long, Long) Booking
+        +markPickup(Long, Long) Booking
+        +markReturn(Long, Long, LocalDateTime, PaymentMethod) Booking
+        +getUserBookings(Long) List~Booking~
+        +expireUnpaidBookings(Duration) int
+        +addListener(BookingEventListener)
+    }
+    class BookingServiceImpl
+    class PaymentService {
+        <<interface>>
+        +charge(Long, BigDecimal, PaymentMethod, PaymentPurpose) Payment
+        +refundRentalPayments(Long) List~Payment~
+    }
+    class PaymentServiceImpl
+    class PricingStrategy {
+        <<interface>>
+        +calculatePrice(Vehicle, LocalDate, LocalDate) BigDecimal
+    }
+    class DailyPricingStrategy
+    class WeekendPricingStrategy
+    class LateFeePolicy {
+        <<interface>>
+        +calculateLateFee(Vehicle, LocalDate, LocalDateTime) BigDecimal
+    }
+    class StandardLateFeePolicy
+    class PaymentProcessor {
+        <<interface>>
+        +supportedMethod() PaymentMethod
+        +process(Payment) PaymentResult
+        +refund(Payment) PaymentResult
+    }
+    class AbstractPaymentProcessor {
+        <<abstract>>
+        +process(Payment) PaymentResult
+        #doProcess(Payment)* PaymentResult
+        #doRefund(Payment)* PaymentResult
+    }
+    class CardPaymentProcessor
+    class UpiPaymentProcessor
+    class CashPaymentProcessor
+    class PaymentProcessorFactory {
+        -Map~PaymentMethod, PaymentProcessor~ processors
+        +getProcessor(PaymentMethod) PaymentProcessor
+    }
+    class BookingEventListener {
+        <<interface>>
+        +onBookingEvent(BookingEvent)
+    }
+    class ConsoleNotificationListener
+    class VehicleLockManager {
+        +withLock(Long, Supplier) T
+    }
+
+    BookingService <|.. BookingServiceImpl
+    PaymentService <|.. PaymentServiceImpl
+    PricingStrategy <|.. DailyPricingStrategy
+    PricingStrategy <|.. WeekendPricingStrategy
+    LateFeePolicy <|.. StandardLateFeePolicy
+    PaymentProcessor <|.. AbstractPaymentProcessor
+    AbstractPaymentProcessor <|-- CardPaymentProcessor
+    AbstractPaymentProcessor <|-- UpiPaymentProcessor
+    AbstractPaymentProcessor <|-- CashPaymentProcessor
+    BookingEventListener <|.. ConsoleNotificationListener
+
+    BookingServiceImpl --> PaymentService
+    BookingServiceImpl --> PricingStrategy
+    BookingServiceImpl --> LateFeePolicy
+    BookingServiceImpl --> VehicleLockManager
+    BookingServiceImpl --> "*" BookingEventListener
+    PaymentServiceImpl --> PaymentProcessorFactory
+    PaymentProcessorFactory --> "*" PaymentProcessor

@@ -1,0 +1,10 @@
+flowchart TD
+    A[cancelBooking bookingId, userId] --> B{Owner or admin?}
+    B -- no --> X[403 AccessDenied]
+    B -- yes --> C[lock vehicle]
+    C --> D{Status?}
+    D -- PENDING_PAYMENT --> E[cancel]
+    D -- CONFIRMED --> F[cancel + refund RENTAL payments]
+    D -- ONGOING / COMPLETED / CANCELLED --> Y[409 InvalidBookingState]
+    E --> G[publish CANCELLED]
+    F --> G

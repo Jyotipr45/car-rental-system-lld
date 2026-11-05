@@ -1,0 +1,45 @@
+sequenceDiagram
+    actor C as Customer
+    participant VC as VehicleController
+    participant VS as VehicleService
+    participant BC as BookingController
+    participant BS as BookingService
+    participant LM as VehicleLockManager
+    participant BR as BookingRepository
+    participant PR as PricingStrategy
+    participant PS as PaymentService
+    participant F as PaymentProcessorFactory
+
+    C->>VC: search(branch, start, end, filters)
+    VC->>VS: searchAvailable(request)
+    VS->>BR: existsActiveOverlap(vehicle, start, end) for each vehicle
+    VS-->>C: available vehicles (cheapest first)
+
+    C->>BC: create(userId, vehicleId, start, end)
+    BC->>BS: createBooking(request)
+    BS->>BS: validate user role and dates
+    BS->>LM: withLock(vehicleId)
+    activate LM
+    LM->>BR: existsActiveOverlap(...)  (re-check, search may be stale)
+    alt overlap
+        LM-->>C: 409 VehicleNotAvailable
+    else free
+        LM->>PR: calculatePrice(vehicle, start, end)
+        LM->>BR: save(Booking PENDING_PAYMENT)
+    end
+    deactivate LM
+    BS-->>C: 201 booking (PENDING_PAYMENT)
+
+    C->>BC: pay(bookingId, UPI)
+    BC->>BS: payForBooking(request)
+    BS->>LM: withLock(vehicleId)
+    BS->>PS: charge(bookingId, total, UPI, RENTAL)
+    PS->>F: getProcessor(UPI)
+    F-->>PS: UpiPaymentProcessor
+    PS-->>BS: Payment (SUCCESS / FAILED)
+    alt SUCCESS
+        BS->>BS: booking.confirm()
+        BS-->>C: 201 payment, booking CONFIRMED
+    else FAILED
+        BS-->>C: 402 PaymentFailed (booking stays PENDING_PAYMENT)
+    end

@@ -19,16 +19,9 @@ Plain **Java 17**, **zero dependencies**, **29 passing tests**, and an end-to-en
 
 ## 🏗️ Architecture at a glance
 
-```mermaid
-flowchart LR
-    C[Client / Demo] --> CT[Controllers<br/>+ GlobalExceptionHandler]
-    CT --> S[Services<br/>Booking · Vehicle · Payment · User · Branch]
-    S --> ST[Strategies<br/>Pricing · LateFee]
-    S --> P[PaymentProcessorFactory<br/>Card · UPI · Cash]
-    S --> E[Event listeners<br/>Observer]
-    S --> R[Repositories]
-    R --> M[(In-memory store)]
-```
+![Architecture Overview](docs/diagrams/architecture-overview.png)
+
+<sub>Diagram source: [architecture-overview.mmd](docs/diagrams/architecture-overview.mmd)</sub>
 
 Layered architecture: **Controller → Service → Repository**, with every dependency injected through constructors from one composition root (`CarRentalSystem`).
 
